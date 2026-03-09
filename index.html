@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RentalRMS</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5; --primary-dark: #4338CA;
+            --success: #10B981; --warning: #F59E0B; --danger: #EF4444;
+            --bg: #F8FAFC; --card: #FFFFFF;
+            --text: #1E293B; --text-light: #64748B;
+            --border: #E2E8F0;
+        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
+        
+        /* Layout */
+        .app-container { display: flex; flex-direction: column; height: 100vh; max-width: 600px; margin: 0 auto; background: var(--bg); position: relative; }
+        header { padding: 16px 20px; background: var(--card); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; z-index: 100; }
+        h1 { font-size: 20px; margin: 0; font-weight: 700; color: var(--primary); }
+        
+        main { flex: 1; overflow-y: auto; padding: 20px; padding-bottom: 80px; }
+        
+        /* Bottom Navigation */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 8px 0; max-width: 600px; margin: 0 auto; z-index: 100; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 11px; color: var(--text-light); text-decoration: none; padding: 5px 10px; }
+        .nav-item.active { color: var(--primary); font-weight: 600; }
+        .nav-item i { font-size: 20px; margin-bottom: 4px; }
+
+        /* Buttons */
+        .btn { padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-fab { position: fixed; bottom: 80px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4); font-size: 24px; }
+        
+        /* Cards & Lists */
+        .card { background: var(--card); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); padding: 16px; margin-bottom: 16px; }
+        .list-item { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+        .list-item:last-child { border-bottom: none; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 12px; font-size: 14px; }
+        
+        /* Status Badges */
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .status-active { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .status-pending { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
+        .status-overdue { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .status-inactive { background: #F1F5F9; color: var(--text-light); }
+        .status-vacant { background: #E0E7FF; color: var(--primary); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; z-index: 200; opacity: 0; visibility: hidden; transition: all 0.3s; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal { background: var(--card); width: 100%; max-width: 600px; margin: 0 auto; border-radius: 24px 24px 0 0; padding: 24px; transform: translateY(100%); transition: transform 0.3s; max-height: 90vh; overflow-y: auto; }
+        .modal-overlay.active .modal { transform: translateY(0); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--text-light); }
+        .form-control { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 16px; background: var(--bg); }
+        .form-control:focus { outline: none; border-color: var(--primary); }
+
+        /* Tab Filters */
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+        .tab { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; color: var(--text-light); background: var(--card); border: 1px solid var(--border); }
+        .tab.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Billing Specifics */
+        .finance-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+        .finance-total { border-top: 2px dashed var(--border); padding-top: 12px; margin-top: 12px; font-weight: 700; font-size: 18px; }
+        .payment-history-item { background: var(--bg); padding: 12px; border-radius: 8px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <header>
+        <h1 id="page-title">Dashboard</h1>
+        <div style="width:24px"></div> <!-- Spacer -->
+    </header>
+
+    <main id="main-content">
+        <!-- Content dynamically injected here -->
+    </main>
+
+    <!-- Floating Action Button -->
+    <button class="btn btn-fab" id="fab-btn" onclick="handleFabClick()">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" data-page="dashboard"><i class="fas fa-th-large"></i><span>Dashboard</span></a>
+        <a href="#" class="nav-item" data-page="properties"><i class="fas fa-building"></i><span>Properties</span></a>
+        <a href="#" class="nav-item" data-page="tenants"><i class="fas fa-users"></i><span>Tenants</span></a>
+        <a href="#" class="nav-item" data-page="reports"><i class="fas fa-chart-bar"></i><span>Reports</span></a>
+        <a href="#" class="nav-item" data-page="settings"><i class="fas fa-cog"></i><span>Settings</span></a>
+    </nav>
+</div>
+
+<!-- Modal Container -->
+<div id="modal-overlay" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div id="modal-content"></div>
+    </div>
+</div>
+
+<script>
+    // --- DATA STORE & STATE ---
+    const DB = {
+        properties: JSON.parse(localStorage.getItem('rrms_properties')) || [],
+        tenants: JSON.parse(localStorage.getItem('rrms_tenants')) || [],
+        contracts: JSON.parse(localStorage.getItem('rrms_contracts')) || [], // Links Property + Tenant + Payments
+    };
+
+    const saveData = () => {
+        localStorage.setItem('rrms_properties', JSON.stringify(DB.properties));
+        localStorage.setItem('rrms_tenants', JSON.stringify(DB.tenants));
+        localStorage.setItem('rrms_contracts', JSON.stringify(DB.contracts));
+    };
+
+    let currentPage = 'dashboard';
+
+    // --- CORE LOGIC: CALCULATIONS & STATUS ---
+    
+    const monthsDiff = (d1, d2) => {
+        let months = (d2.getFullYear() - d1.getFullYear()) * 12;
+        months -= d1.getMonth();
+        months += d2.getMonth();
+        return months <= 0 ? 0 : months;
+    };
+
+    const getDaysDiff = (d1, d2) => Math.ceil((d2 - d1) / (1000 * 60 * 60 * 24));
+
+    // The "Snowball" and Status Logic
+    function calculateContractStatus(contract) {
+        const now = new Date();
+        const start = new Date(contract.startDate);
+        const rate = parseFloat(contract.rate);
+        const term = contract.term; // 'monthly' or 'daily'
+        
+        // 1. Calculate Total Obligation up to Today
+        let totalObligation = 0;
+        let cyclesPassed = 0;
+        
+        if (term === 'monthly') {
+            // Logic: A cycle is 30 days for simplicity or month-to-month
+            // We calculate how many months have passed since start
+            const mDiff = monthsDiff(start, now);
+            // Add partial current month if day is past start day? 
+            // Simplification: Use 30-day fixed cycle for bedspacers
+            const daysPassed = getDaysDiff(start, now);
+            cyclesPassed = Math.floor(daysPassed / 30); 
+            // Start date counts as Cycle 0. 
+            // If today is Day 1, 1 cycle is due? 
+            // "Payment Precedes Occupancy" -> First payment covers first 30 days.
+            // So obligation starts immediately.
+            
+            // If daysPassed is 0 (same day), 1 cycle is considered active/paid if payment exists.
+            // But for obligation calculation, if they occupied, they owe.
+            
+            totalObligation = (cyclesPassed + 1) * rate;
+        } else {
+            // Daily
+            const daysPassed = getDaysDiff(start, now);
+            cyclesPassed = daysPassed; 
+            totalObligation = (cyclesPassed + 1) * rate; // +1 because start day is paid
+        }
+
+        // 2. Calculate Total Paid
+        const totalPaid = contract.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+        
+        // 3. Determine Balance
+        const balance = totalObligation - totalPaid;
+        
+        // 4. Determine Status & Visuals
+        let status = 'active'; // Default assumption
+        let visual = 'green'; // Paid
+        
+        if (balance > 0) {
+            // If there is a balance, check deadlines
+            // Deadline is End of Cycle + Grace Period
+            // Last paid cycle end date?
+            
+            // Simplified Logic for "Snowball":
+            // If Paid < Obligation, they are in debt.
+            // When did the debt start?
+            // Last coverage date:
+            const paidCycles = Math.floor(totalPaid / rate);
+            let lastCoveredDate = new Date(start);
+            
+            if (term === 'monthly') {
+                lastCoveredDate.setDate(lastCoveredDate.getDate() + (paidCycles * 30));
+            } else {
+                lastCoveredDate.setDate(lastCoveredDate.getDate() + paidCycles);
+            }
+
+            // If now > lastCoveredDate, we are in pending/overdue territory
+            if (now > lastCoveredDate) {
+                const daysUnpaid = getDaysDiff(lastCoveredDate, now);
+                const gracePeriod = term === 'monthly' ? 14 : 0.2; // 14 days or ~5hrs (represented as fraction for logic demo)
+
+                if (daysUnpaid <= gracePeriod) {
+                    status = 'pending'; // Yellow
+                    visual = 'yellow';
+                } else {
+                    status = 'overdue'; // Red
+                    visual = 'red';
+                }
+            } else {
+                // Should theoretically not happen if balance > 0 and logic holds, 
+                // but safe fallback (paid ahead but partial?)
+                status = 'active'; 
+                visual = 'yellow'; // Partial
+            }
+        } else {
+            // Balance <= 0 means Paid in Full (or ahead)
+            status = 'active';
+            visual = 'green';
+        }
+
+        // Global Inactive Check (Contract Ended)
+        if (contract.status === 'inactive') {
+            status = 'inactive';
+            visual = 'gray';
+        }
+
+        return {
+            status,
+            visual,
+            balance,
+            totalPaid,
+            totalObligation,
+            cyclesPaid: Math.floor(totalPaid / rate),
+            nextDueDate: getNextDueDate(start, Math.floor(totalPaid / rate), term)
+        };
+    }
+
+    function getNextDueDate(start, paidCycles, term) {
+        let nextDue = new Date(start);
+        if (term === 'monthly') {
+            nextDue.setDate(nextDue.getDate() + ((paidCycles) * 30)); // Next due is after the last paid cycle
+        } else {
+            nextDue.setDate(nextDue.getDate() + paidCycles);
+        }
+        return nextDue;
+    }
+
+    // --- UI RENDERING ---
+
+    function renderPage(page) {
+        currentPage = page;
+        document.getElementById('page-title').textContent = page.charAt(0).toUpperCase() + page.slice(1);
+        
+        // Active nav
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.nav-item[data-page="${page}"]`)?.classList.add('active');
+
+        const main = document.getElementById('main-content');
+        const fab = document.getElementById('fab-btn');
+        fab.style.display = 'flex'; // Default show
+
+        switch(page) {
+            case 'dashboard': renderDashboard(); break;
+            case 'properties': renderProperties(); break;
+            case 'tenants': renderTenants(); break;
+            case 'reports': renderReports(); break;
+            case 'settings': renderSettings(); break;
+            default: renderDashboard();
+        }
+    }
+
+    function renderDashboard() {
+        const fab = document.getElementById('fab-btn');
+        fab.style.display = 'none'; // Logic drives action from Properties
+
+        const activeContracts = DB.contracts.filter(c => c.status !== 'inactive');
+        
+        let summary = { green: 0, yellow: 0, red: 0, revenue: 0 };
+        
+        activeContracts.forEach(c => {
+            const stats = calculateContractStatus(c);
+            if (stats.visual === 'green') summary.green++;
+            if (stats.visual === 'yellow') summary.yellow++;
+            if (stats.visual === 'red') summary.red++;
+            summary.revenue += stats.totalPaid;
+        });
+
+        document.getElementById('main-content').innerHTML = `
+            <div class="tabs">
+                <div class="tab active">Overview</div>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-top:0">Financial Overview</h3>
+                <p style="font-size:28px; font-weight:700; color:var(--primary)">₱${summary.revenue.toLocaleString()}</p>
+                <p style="color:var(--text-light)">Total Collected Revenue</p>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-top:0">Rental Status</h3>
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <div style="flex:1; text-align:center; padding:10px; background:rgba(16,185,129,0.1); border-radius:8px;">
+                        <div style="font-size:24px; font-weight:700; color:var(--success)">${summary.green}</div>
+                        <div style="font-size:12px; color:var(--success)">Paid</div>
+                    </div>
+                    <div style="flex:1; text-align:center; padding:10px; background:rgba(245,158,11,0.1); border-radius:8px;">
+                        <div style="font-size:24px; font-weight:700; color:var(--warning)">${summary.yellow}</div>
+                        <div style="font-size:12px; color:var(--warning)">Pending</div>
+                    </div>
+                    <div style="flex:1; text-align:center; padding:10px; background:rgba(239,68,68,0.1); border-radius:8px;">
+                        <div style="font-size:24px; font-weight:700; color:var(--danger)">${summary.red}</div>
+                        <div style="font-size:12px; color:var(--danger)">Overdue</div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Recent Activity</h3>
+            <div class="card">
+                <p style="color:var(--text-light); text-align:center; padding:20px;">
+                    Track rentals in the Properties tab.<br>
+                    Tenants and Properties are managed separately.
+                </p>
+            </div>
+        `;
+    }
+
+    function renderProperties() {
+        const html = `
+            <div class="tabs">
+                <div class="tab active" onclick="filterProperties('all')">All</div>
+                <div class="tab" onclick="filterProperties('vacant')">Vacant</div>
+                <div class="tab" onclick="filterProperties('occupied')">Occupied</div>
+            </div>
+            <div id="property-list">
+                ${renderPropertyList()}
+            </div>
+        `;
+        document.getElementById('main-content').innerHTML = html;
+    }
+
+    function renderPropertyList(filter = 'all') {
+        if (DB.properties.length === 0) {
+            return `<div class="card" style="text-align:center; color:var(--text-light)"><p>No properties added yet.</p><p>Click the + button to add one.</p></div>`;
+        }
+
+        return DB.properties.map(prop => {
+            const contract = DB.contracts.find(c => c.propertyId === prop.id && c.status !== 'inactive');
+            const isOccupied = !!contract;
+            
+            // Filter logic
+            if (filter === 'vacant' && isOccupied) return '';
+            if (filter === 'occupied' && !isOccupied) return '';
+
+            let statusHtml = `<span class="status-badge status-vacant">Vacant</span>`;
+            if (isOccupied) {
+                const stats = calculateContractStatus(contract);
+                const tenant = DB.tenants.find(t => t.id === contract.tenantId);
+                let statusClass = `status-${stats.status}`;
+                if (stats.visual === 'red') statusClass = 'status-overdue';
+                if (stats.visual === 'yellow') statusClass = 'status-pending';
+                
+                statusHtml = `
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                        <span class="status-badge ${statusClass}">${stats.status.toUpperCase()}</span>
+                        <small style="color:var(--text-light); margin-top:4px">${tenant?.name || 'Unknown'}</small>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="card list-item" onclick="openPropertyDetail('${prop.id}')">
+                    <div class="avatar" style="background:${isOccupied ? 'var(--primary)' : 'var(--text-light)'}">
+                       <i class="fas fa-${prop.type === 'bedspace' ? 'bed' : 'building'}"></i>
+                    </div>
+                    <div style="flex:1">
+                        <div style="font-weight:600">${prop.name}</div>
+                        <div style="font-size:12px; color:var(--text-light)">${prop.type} • ₱${parseFloat(prop.rate).toLocaleString()}/${prop.term}</div>
+                    </div>
+                    ${statusHtml}
+                </div>
+            `;
+        }).join('');
+    }
+
+    function filterProperties(type) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+        document.getElementById('property-list').innerHTML = renderPropertyList(type);
+    }
+
+    function renderTenants() {
+        const html = `
+            <div class="tabs">
+                <div class="tab active">All</div>
+            </div>
+            <div id="tenant-list">
+                ${DB.tenants.map(t => {
+                    const hasActiveContract = DB.contracts.find(c => c.tenantId === t.id && c.status !== 'inactive');
+                    return `
+                        <div class="card list-item" onclick="openTenantDetail('${t.id}')">
+                            <div class="avatar">${t.name.charAt(0)}</div>
+                            <div style="flex:1">
+                                <div style="font-weight:600">${t.name}</div>
+                                <div style="font-size:12px; color:var(--text-light)">${t.contact || 'No contact'} • ${hasActiveContract ? 'Active' : 'No Rentals'}</div>
+                            </div>
+                            <span class="status-badge ${hasActiveContract ? 'status-active' : 'status-inactive'}">${hasActiveContract ? 'ACTIVE' : 'INACTIVE'}</span>
+                        </div>
+                    `;
+                }).join('') || '<div class="card" style="text-align:center">No tenants found. Click + to add.</div>'}
+            </div>
+        `;
+        document.getElementById('main-content').innerHTML = html;
+    }
+
+    // --- ACTIONS & MODALS ---
+
+    function handleFabClick() {
+        if (currentPage === 'properties') {
+            openModal('Add New Property', `
+                <div class="form-group">
+                    <label>Property Name</label>
+                    <input type="text" id="prop-name" class="form-control" placeholder="e.g., Room 101, Bed A">
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="prop-type" class="form-control">
+                        <option value="bedspace">Bedspace</option>
+                        <option value="room">Room</option>
+                        <option value="house">House</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Rate (Base Price)</label>
+                    <input type="number" id="prop-rate" class="form-control" placeholder="2000">
+                </div>
+                <div class="form-group">
+                    <label>Term</label>
+                    <select id="prop-term" class="form-control">
+                        <option value="monthly">Monthly</option>
+                        <option value="daily">Daily</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="saveProperty()">Save Property</button>
+            `);
+        } else if (currentPage === 'tenants') {
+             openModal('Add New Tenant', `
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="tenant-name" class="form-control" placeholder="Juan Dela Cruz">
+                </div>
+                <div class="form-group">
+                    <label>Contact Info</label>
+                    <input type="text" id="tenant-contact" class="form-control" placeholder="09123456789">
+                </div>
+                <button class="btn btn-primary" onclick="saveTenant()">Save Tenant</button>
+            `);
+        }
+    }
+
+    function saveProperty() {
+        const name = document.getElementById('prop-name').value;
+        const type = document.getElementById('prop-type').value;
+        const rate = document.getElementById('prop-rate').value;
+        const term = document.getElementById('prop-term').value;
+
+        if (!name || !rate) return alert("Please fill all fields");
+
+        DB.properties.push({
+            id: 'prop_' + Date.now(),
+            name, type, rate, term
+        });
+        saveData();
+        closeModal();
+        renderPage('properties');
+    }
+
+    function saveTenant() {
+        const name = document.getElementById('tenant-name').value;
+        const contact = document.getElementById('tenant-contact').value;
+        if (!name) return alert("Name required");
+
+        DB.tenants.push({ id: 'ten_' + Date.now(), name, contact });
+        saveData();
+        closeModal();
+        renderPage('tenants');
+    }
+
+    function openPropertyDetail(id) {
+        const prop = DB.properties.find(p => p.id === id);
+        const contract = DB.contracts.find(c => c.propertyId === id && c.status !== 'inactive');
+
+        if (!contract) {
+            // Vacant -> Show "Rent Out" Button
+            openModal(prop.name, `
+                <p style="color:var(--text-light)">This property is currently vacant.</p>
+                <p><strong>Type:</strong> ${prop.type}</p>
+                <p><strong>Rate:</strong> ₱${parseFloat(prop.rate).toLocaleString()} / ${prop.term}</p>
+                <hr style="border-color:var(--border)">
+                <h3>Rent Out Property</h3>
+                <div class="form-group">
+                    <label>Select Tenant</label>
+                    <select id="rent-tenant" class="form-control">
+                        ${DB.tenants.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                    </select>
+                    <small style="color:var(--danger)">No tenants? Add them in the Tenants tab first.</small>
+                </div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="rent-start" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+                </div>
+                <div class="form-group">
+                    <label>Initial Payment Amount</label>
+                    <input type="number" id="rent-payment" class="form-control" value="${prop.rate}">
+                    <small style="color:var(--danger)">Payment is required to activate contract.</small>
+                </div>
+                <button class="btn btn-primary" onclick="activateContract('${id}')">Activate & Pay</button>
+                <button class="btn" style="background:var(--danger); color:white; margin-top:10px" onclick="deleteProperty('${id}')">Delete Property</button>
+            `);
+        } else {
+            // Occupied -> Show Billing
+            openBilling(prop, contract);
+        }
+    }
+
+    function activateContract(propId) {
+        const tenantId = document.getElementById('rent-tenant').value;
+        const startDate = document.getElementById('rent-start').value;
+        const initialPayment = parseFloat(document.getElementById('rent-payment').value);
+        const prop = DB.properties.find(p => p.id === propId);
+
+        if (!tenantId) return alert("Please select a tenant");
+        if (initialPayment <= 0) return alert("Initial payment is required to activate.");
+
+        const newContract = {
+            id: 'con_' + Date.now(),
+            propertyId: propId,
+            tenantId,
+            startDate,
+            rate: prop.rate,
+            term: prop.term,
+            payments: [{
+                id: 'pay_' + Date.now(),
+                date: new Date().toISOString(),
+                amount: initialPayment
+            }],
+            status: 'active'
+        };
+
+        DB.contracts.push(newContract);
+        saveData();
+        closeModal();
+        renderPage('properties');
+    }
+
+    function openBilling(prop, contract) {
+        const tenant = DB.tenants.find(t => t.id === contract.tenantId);
+        const stats = calculateContractStatus(contract);
+        
+        const statusClass = stats.visual === 'red' ? 'status-overdue' : (stats.visual === 'yellow' ? 'status-pending' : 'status-active');
+        const statusText = stats.status.toUpperCase();
+
+        let paymentHistoryHtml = contract.payments.map(p => `
+            <div class="payment-history-item">
+                <div>
+                    <div style="font-weight:600">₱${parseFloat(p.amount).toLocaleString()}</div>
+                    <div style="font-size:12px; color:var(--text-light)">${new Date(p.date).toLocaleDateString()}</div>
+                </div>
+                <div style="display:flex; gap:10px">
+                    <button onclick="editPayment('${contract.id}', '${p.id}')" style="background:none; border:none; color:var(--primary)"><i class="fas fa-edit"></i></button>
+                </div>
+            </div>
+        `).join('');
+
+        const html = `
+            <h2 style="margin-top:0">${prop.name}</h2>
+            <span class="status-badge ${statusClass}" style="margin-bottom:16px; display:inline-block">${statusText}</span>
+            
+            <div style="background:var(--bg); padding:16px; border-radius:8px; margin-bottom:20px;">
+                <div class="finance-row">
+                    <span>Tenant</span>
+                    <span style="font-weight:600">${tenant?.name || 'Unknown'}</span>
+                </div>
+                <div class="finance-row">
+                    <span>Rate</span>
+                    <span>₱${parseFloat(prop.rate).toLocaleString()} / ${prop.term}</span>
+                </div>
+                <div class="finance-row">
+                    <span>Started</span>
+                    <span>${new Date(contract.startDate).toLocaleDateString()}</span>
+                </div>
+                <div class="finance-row">
+                    <span>Total Paid</span>
+                    <span style="color:var(--success)">₱${stats.totalPaid.toLocaleString()}</span>
+                </div>
+                <div class="finance-row finance-total">
+                    <span>Balance / Arrears</span>
+                    <span style="color:var(--danger)">₱${stats.balance.toFixed(2)}</span>
+                </div>
+            </div>
+
+            <h3>Payment History</h3>
+            ${paymentHistoryHtml || '<p style="color:var(--text-light)">No payments recorded</p>'}
+
+            <div style="margin-top: 24px">
+                <button class="btn btn-primary" onclick="recordPayment('${contract.id}')">Record Payment</button>
+                <button class="btn" style="width:100%; margin-top:8px; background:var(--text-light); color:white" onclick="endContract('${contract.id}')">End Contract</button>
+            </div>
+        `;
+        openModal('Billing Details', html);
+    }
+
+    function recordPayment(contractId) {
+        const contract = DB.contracts.find(c => c.id === contractId);
+        const today = new Date().toISOString().split('T')[0];
+
+        openModal('Record Payment', `
+            <div class="form-group">
+                <label>Amount</label>
+                <input type="number" id="pay-amount" class="form-control" placeholder="Enter amount" value="${contract.rate}">
+            </div>
+            <div class="form-group">
+                <label>Date Paid</label>
+                <input type="date" id="pay-date" class="form-control" value="${today}">
+            </div>
+            <button class="btn btn-primary" onclick="savePayment('${contractId}')">Save Payment</button>
+        `);
+    }
+
+    function savePayment(contractId) {
+        const amount = parseFloat(document.getElementById('pay-amount').value);
+        const date = document.getElementById('pay-date').value;
+        
+        const contract = DB.contracts.find(c => c.id === contractId);
+        contract.payments.push({ id: 'pay_' + Date.now(), amount, date: new Date(date).toISOString() });
+        
+        saveData();
+        closeModal();
+        // Refresh Billing
+        const prop = DB.properties.find(p => p.id === contract.propertyId);
+        openBilling(prop, contract);
+    }
+
+    function editPayment(contractId, paymentId) {
+        const contract = DB.contracts.find(c => c.id === contractId);
+        const payment = contract.payments.find(p => p.id === paymentId);
+        const dateVal = new Date(payment.date).toISOString().split('T')[0];
+
+        openModal('Edit Payment', `
+            <div class="form-group">
+                <label>Amount</label>
+                <input type="number" id="edit-pay-amount" class="form-control" value="${payment.amount}">
+            </div>
+            <div class="form-group">
+                <label>Date Paid</label>
+                <input type="date" id="edit-pay-date" class="form-control" value="${dateVal}">
+            </div>
+            <button class="btn btn-primary" onclick="updatePayment('${contractId}', '${paymentId}')">Update</button>
+            <button class="btn" style="background:var(--danger); color:white; margin-top:8px; width:100%" onclick="deletePayment('${contractId}', '${paymentId}')">Delete Payment</button>
+        `);
+    }
+
+    function updatePayment(contractId, paymentId) {
+        const amount = parseFloat(document.getElementById('edit-pay-amount').value);
+        const date = document.getElementById('edit-pay-date').value;
+        
+        const contract = DB.contracts.find(c => c.id === contractId);
+        const payIdx = contract.payments.findIndex(p => p.id === paymentId);
+        contract.payments[payIdx] = { ...contract.payments[payIdx], amount, date: new Date(date).toISOString() };
+        
+        saveData();
+        closeModal();
+        const prop = DB.properties.find(p => p.id === contract.propertyId);
+        openBilling(prop, contract);
+    }
+    
+    function deletePayment(contractId, paymentId) {
+        if(!confirm("Delete this payment? This affects balance.")) return;
+        const contract = DB.contracts.find(c => c.id === contractId);
+        contract.payments = contract.payments.filter(p => p.id !== paymentId);
+        saveData();
+        closeModal();
+        const prop = DB.properties.find(p => p.id === contract.propertyId);
+        openBilling(prop, contract);
+    }
+
+    function endContract(contractId) {
+        if(!confirm("Mark this contract as Inactive? The tenant will be removed from the property.")) return;
+        const contract = DB.contracts.find(c => c.id === contractId);
+        contract.status = 'inactive';
+        saveData();
+        closeModal();
+        renderPage('properties');
+    }
+
+    function deleteProperty(propId) {
+        if(!confirm("Delete this property?")) return;
+        DB.properties = DB.properties.filter(p => p.id !== propId);
+        saveData();
+        closeModal();
+        renderPage('properties');
+    }
+
+    function openTenantDetail(id) {
+        const tenant = DB.tenants.find(t => t.id === id);
+        const history = DB.contracts.filter(c => c.tenantId === id);
+        
+        openModal(tenant.name, `
+            <p><strong>Contact:</strong> ${tenant.contact || 'N/A'}</p>
+            <h3 style="margin-top:20px">Rental History</h3>
+            ${history.map(c => {
+                const prop = DB.properties.find(p => p.id === c.propertyId);
+                return `<div class="list-item"><div>${prop?.name || 'Unknown Property'}</div><span class="status-badge ${c.status === 'active' ? 'status-active' : 'status-inactive'}">${c.status}</span></div>`;
+            }).join('') || '<p>No rental history found.</p>'}
+            <button class="btn" style="background:var(--danger); color:white; margin-top:20px; width:100%" onclick="deleteTenant('${id}')">Delete Tenant</button>
+        `);
+    }
+
+    function deleteTenant(id) {
+        if(!confirm("Delete tenant?")) return;
+        DB.tenants = DB.tenants.filter(t => t.id !== id);
+        saveData();
+        closeModal();
+        renderPage('tenants');
+    }
+
+    // --- MODAL SYSTEM ---
+    function openModal(title, content) {
+        document.getElementById('modal-content').innerHTML = `<h2 style="margin-top:0">${title}</h2>${content}`;
+        document.getElementById('modal-overlay').classList.add('active');
+    }
+
+    function closeModal(e) {
+        if (e && e.target !== e.currentTarget) return;
+        document.getElementById('modal-overlay').classList.remove('active');
+    }
+
+    // --- INITIALIZATION ---
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const page = item.getAttribute('data-page');
+            renderPage(page);
+        });
+    });
+
+    // Service Worker Registration
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js')
+            .then(reg => console.log('SW Registered'))
+            .catch(err => console.log('SW Failed', err));
+    }
+
+    // Initial Load
+    renderPage('dashboard');
+
+    // Helper to check dates daily
+    setInterval(() => {
+        // In a real app, we might trigger notifications here
+        // For now, we just re-render if data is stale
+    }, 60000);
+
+</script>
+</body>
+</html>
