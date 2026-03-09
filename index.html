@@ -1,0 +1,2979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- NATIVE APP VIEWPORT: Prevents scaling, honors device width, and covers safe areas (notches) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RentalRMS">
+    <title>RentalRMS</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+    
+    <!-- CDN Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    
+    <style>
+        /* ========== NATIVE APP CSS RESETS & BASE ========== */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; /* Prevents 300ms delay and limits gestures */
+        }
+
+        :root {
+            --bg-primary: #F8FAFC;
+            --bg-secondary: #FFFFFF;
+            --bg-card: #FFFFFF;
+            --bg-input: #F3F4F6;
+            --primary: #4F46E5;
+            --primary-light: #6366F1;
+            --primary-dark: #4338CA;
+            --success: #10B981;
+            --success-light: #34D399;
+            --danger: #EF4444;
+            --danger-light: #F87171;
+            --warning: #F59E0B;
+            --warning-light: #FBBF24;
+            --text-primary: #1F2937;
+            --text-secondary: #6B7280;
+            --text-muted: #9CA3AF;
+            --border: #E5E7EB;
+            --gradient-primary: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            --gradient-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
+            --gradient-danger: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+            --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --radius: 12px;
+            --radius-lg: 16px;
+            --radius-full: 9999px;
+            --transition: all 0.3s ease;
+            --bottom-nav-height: 70px;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden; /* Prevents rubber-banding on the body */
+            touch-action: pan-y;
+            -webkit-touch-callout: none; /* Disables standard iOS popup */
+            -webkit-user-select: none; /* Prevents text selection globally */
+            user-select: none;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+
+        /* Re-enable selection ONLY in input fields so users can type */
+        input, textarea, select {
+            -webkit-user-select: auto !important;
+            user-select: auto !important;
+        }
+
+        /* ========== UTILITIES ========== */
+        .hidden { display: none !important; }
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-1 { gap: 4px; }
+        .gap-2 { gap: 8px; }
+        .gap-3 { gap: 12px; }
+        .gap-4 { gap: 16px; }
+        .p-2 { padding: 8px; }
+        .p-3 { padding: 12px; }
+        .p-4 { padding: 16px; }
+        .p-6 { padding: 24px; }
+        .mb-2 { margin-bottom: 8px; }
+        .mb-3 { margin-bottom: 12px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mt-2 { margin-top: 8px; }
+        .mt-4 { margin-top: 16px; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 14px; }
+        .text-xs { font-size: 12px; }
+        .text-lg { font-size: 18px; }
+        .text-xl { font-size: 20px; }
+        .text-2xl { font-size: 24px; }
+        .text-3xl { font-size: 30px; }
+        .font-bold { font-weight: 700; }
+        .font-semibold { font-weight: 600; }
+        .text-muted { color: var(--text-muted); }
+        .text-secondary { color: var(--text-secondary); }
+        .text-success { color: var(--success); }
+        .text-danger { color: var(--danger); }
+        .text-warning { color: var(--warning); }
+        .w-full { width: 100%; }
+        .overflow-hidden { overflow: hidden; }
+        .overflow-y-auto { overflow-y: auto; }
+        .flex-1 { flex: 1; }
+        .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* ========== APP CONTAINER (NATIVE APP BOUNDING BOX) ========== */
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh; /* Adapts to dynamic mobile viewports */
+            max-width: 480px; /* Constrains it to a phone size even on tablet/desktop */
+            margin: 0 auto;
+            width: 100%;
+            background: var(--bg-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Desktop specific border wrapper to simulate phone screen */
+        @media (min-width: 481px) {
+            #app {
+                border-left: 1px solid var(--border);
+                border-right: 1px solid var(--border);
+            }
+        }
+
+        /* ========== LOCK SCREEN ========== */
+        #lock-screen {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-primary);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .lock-logo {
+            width: 80px; height: 80px;
+            margin-bottom: 24px;
+            background: var(--gradient-primary);
+            border-radius: var(--radius-lg);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .lock-logo svg {
+            width: 48px; height: 48px;
+            stroke: white; fill: none;
+        }
+
+        .lock-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .lock-subtitle { color: var(--text-secondary); margin-bottom: 32px; }
+
+        .pin-display { display: flex; gap: 12px; margin-bottom: 32px; }
+        .pin-dot {
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: var(--border);
+            transition: var(--transition);
+        }
+        .pin-dot.filled { background: var(--primary); }
+        .pin-dot.error { background: var(--danger); animation: shake 0.3s ease; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 280px; }
+        .num-btn {
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            font-size: 28px; font-weight: 600;
+            cursor: pointer; transition: var(--transition);
+            display: flex; align-items: center; justify-content: center; justify-self: center;
+        }
+        .num-btn:active { transform: scale(0.95); background: var(--bg-card); }
+        .num-btn.action { background: transparent; font-size: 14px; color: var(--text-secondary); }
+        .num-btn.action:active { background: var(--danger); color: white; }
+
+        /* ========== MAIN CONTENT ========== */
+        #main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-bottom: var(--bottom-nav-height);
+        }
+
+        /* ========== HEADER ========== */
+        .header {
+            background: var(--bg-card);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .header-title { font-size: 18px; font-weight: 700; }
+        .header-logo { display: flex; align-items: center; gap: 4px; }
+        .header-avatar { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+        .avatar-initials {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+            display: flex; align-items: center; justify-content: center;
+            color: white; font-weight: 600; font-size: 14px;
+        }
+
+        .icon-btn {
+            width: 40px; height: 40px;
+            border-radius: var(--radius-full);
+            background: transparent; border: none;
+            color: var(--text-primary);
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: var(--transition);
+        }
+        .icon-btn:active { transform: scale(0.95); background: var(--bg-input); }
+        .icon-btn svg { width: 20px; height: 20px; }
+
+        /* Welcome Section */
+        .welcome-section { margin-bottom: 20px; }
+        .greeting { display: flex; align-items: flex-start; gap: 12px; }
+        .greeting-icon { font-size: 24px; }
+        .greeting h2 { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+        .date-display { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+        .alert-badge {
+            display: inline-flex; align-items: center; gap: 6px; margin-top: 12px; padding: 8px 14px;
+            background: rgba(20, 184, 166, 0.1); border-radius: 20px; color: #14B8A6; font-size: 13px; font-weight: 500;
+        }
+
+        /* ========== PAGE CONTAINER ========== */
+        .page {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 16px;
+            display: none;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain; /* Prevents pull-to-refresh on Android/iOS when inside specific container */
+        }
+        .page.active { display: block; }
+
+        /* ========== DASHBOARD CARDS ========== */
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 16px; position: relative; overflow: hidden;
+        }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .stat-card.primary::before { background: var(--gradient-primary); }
+        .stat-card.success::before { background: var(--gradient-success); }
+        .stat-card.danger::before { background: var(--gradient-danger); }
+        .stat-card.warning::before { background: var(--warning); }
+        
+        .stat-value { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+        .stat-label { color: var(--text-secondary); font-size: 13px; }
+
+        .stat-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .stat-title { font-size: 14px; font-weight: 600; color: var(--primary); }
+        .stat-badges { display: flex; gap: 6px; margin-top: 8px; }
+        .badge { padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+        .badge.success { background: rgba(16, 185, 129, 0.1); color: var(--success); }
+        .badge.danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
+        .stat-arrow {
+            position: absolute; right: 12px; bottom: 12px; width: 28px; height: 28px;
+            border-radius: 50%; background: var(--bg-input); border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+        }
+        .stat-arrow svg { width: 16px; height: 16px; }
+
+        /* Section Card */
+        .section-card {
+            background: var(--bg-card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow);
+        }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .section-header h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+
+        /* Collection Rate */
+        .collection-content { display: flex; align-items: center; gap: 20px; }
+        .progress-ring { position: relative; width: 80px; height: 80px; }
+        .progress-ring svg { transform: rotate(-90deg); }
+        .progress-bg { fill: none; stroke: var(--bg-input); stroke-width: 8; }
+        .progress-fill { fill: none; stroke: var(--primary); stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 0.5s ease; }
+        .progress-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+        .progress-value { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+        .progress-label { font-size: 10px; color: var(--text-secondary); display: block; }
+        .collection-info { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+        .collection-label { font-size: 14px; color: var(--text-secondary); }
+
+        /* Pipeline Grid */
+        .pipeline-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+        .pipeline-item { padding: 12px; background: var(--bg-primary); border-radius: var(--radius); }
+        .pipeline-value { font-size: 24px; font-weight: 700; }
+        .pipeline-value.primary { color: var(--primary); }
+        .pipeline-value.success { color: var(--success); }
+        .pipeline-value.warning { color: var(--warning); }
+        .pipeline-value.danger { color: var(--danger); }
+        .pipeline-title { font-size: 10px; font-weight: 600; color: var(--text-secondary); margin-top: 4px; }
+        .pipeline-desc { font-size: 11px; color: var(--text-muted); }
+        
+        .view-all-btn {
+            display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px;
+            background: transparent; border: 1px solid var(--border); border-radius: var(--radius);
+            color: var(--text-secondary); font-size: 14px; cursor: pointer;
+        }
+
+        /* Payment Status */
+        .payment-status-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+        .payment-status-item { padding: 12px; border-radius: var(--radius); }
+        .payment-status-item.purple { background: rgba(79, 70, 229, 0.05); }
+        .payment-status-item.red { background: rgba(239, 68, 68, 0.05); }
+        .payment-status-item.green { background: rgba(16, 185, 129, 0.05); }
+        .payment-status-header { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; margin-bottom: 12px; color: var(--text-primary); }
+        .payment-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .payment-col { text-align: center; }
+        .payment-label { font-size: 12px; color: var(--text-secondary); display: block; }
+        .payment-value { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .payment-status-value { font-size: 24px; font-weight: 700; }
+        .payment-status-value.success { color: var(--success); }
+        .payment-status-value.danger { color: var(--danger); }
+        .payment-status-label { font-size: 12px; color: var(--text-secondary); }
+
+        .section-title { font-size: 18px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .activity-list { background: var(--bg-card); border-radius: var(--radius); overflow: hidden; }
+        .activity-item { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon { width: 36px; height: 36px; border-radius: var(--radius-full); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .activity-icon.income { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .activity-icon.expense { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .activity-icon.info { background: rgba(79, 70, 229, 0.2); color: var(--primary-light); }
+        .activity-icon svg { width: 18px; height: 18px; }
+        .activity-content { flex: 1; min-width: 0; }
+        .activity-text { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .activity-time { font-size: 12px; color: var(--text-muted); }
+        .activity-amount { font-weight: 600; font-size: 14px; }
+        .activity-amount.positive { color: var(--success); }
+        .activity-amount.negative { color: var(--danger); }
+
+        /* ========== FAB ========== */
+        .fab {
+            position: absolute; /* absolute bounds it inside #app max-width */
+            bottom: calc(var(--bottom-nav-height) + 16px);
+            right: 16px;
+            width: 56px; height: 56px;
+            border-radius: var(--radius-full);
+            background: var(--gradient-primary); border: none; color: white;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow-lg); z-index: 90; transition: var(--transition);
+        }
+        .fab:active { transform: scale(0.95); }
+        .fab svg { width: 24px; height: 24px; }
+
+        /* ========== CARDS LIST ========== */
+        .card-list { display: flex; flex-direction: column; gap: 12px; }
+        .rental-card {
+            background: var(--bg-card); border-radius: var(--radius); padding: 16px;
+            display: flex; align-items: center; gap: 12px; cursor: pointer; transition: var(--transition);
+        }
+        .rental-card:active { transform: scale(0.98); }
+        .rental-avatar {
+            width: 48px; height: 48px; border-radius: var(--radius-full); background: var(--gradient-primary);
+            display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; flex-shrink: 0; color: white;
+        }
+        .rental-avatar img { width: 100%; height: 100%; border-radius: var(--radius-full); object-fit: cover; }
+        .rental-info { flex: 1; min-width: 0; }
+        .rental-name { font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .rental-details { font-size: 13px; color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+        .rental-status { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .status-badge { padding: 4px 10px; border-radius: var(--radius-full); font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .status-badge.active { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .status-badge.pending { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .status-badge.overdue { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .status-badge.paid { background: rgba(34, 197, 94, 0.2); color: var(--success); }
+        .status-badge.partial { background: rgba(79, 70, 229, 0.2); color: var(--primary-light); }
+        .rental-amount { font-weight: 600; font-size: 14px; }
+
+        /* ========== BOTTOM NAV ========== */
+        .bottom-nav {
+            position: absolute; /* Bounds nav inside max-width container */
+            bottom: 0; left: 0; right: 0; height: var(--bottom-nav-height);
+            background: var(--bg-card); display: flex; align-items: center; justify-content: space-around;
+            border-top: 1px solid var(--border); z-index: 100;
+        }
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 16px;
+            background: none; border: none; color: var(--text-muted); cursor: pointer; transition: var(--transition);
+        }
+        .nav-item.active { color: var(--primary); }
+        .nav-item svg { width: 24px; height: 24px; }
+        .nav-label { font-size: 11px; font-weight: 500; }
+
+        /* ========== MODAL ========== */
+        .modal-overlay {
+            position: absolute; /* within container bounds */
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.7); z-index: 200;
+            display: flex; align-items: flex-end; justify-content: center;
+            opacity: 0; visibility: hidden; transition: var(--transition);
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal {
+            background: var(--bg-secondary); border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            width: 100%; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column;
+            transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal-overlay.active .modal { transform: translateY(0); }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .modal-title { font-size: 18px; font-weight: 600; }
+        .modal-close {
+            width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--bg-card); border: none;
+            color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center;
+        }
+        .modal-close svg { width: 18px; height: 18px; }
+        .modal-body {
+            padding: 20px; overflow-y: auto; max-height: calc(90vh - 140px);
+            -webkit-overflow-scrolling: touch;
+        }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; gap: 12px; }
+
+        /* ========== FORM ELEMENTS ========== */
+        .form-group { margin-bottom: 16px; }
+        .form-label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 8px; color: var(--text-secondary); }
+        .form-input {
+            width: 100%; padding: 12px 16px; background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: var(--radius); color: var(--text-primary); font-size: 16px; transition: var(--transition);
+        }
+        .form-input:focus { outline: none; border-color: var(--primary); }
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%239CA3AF' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px;
+        }
+        .form-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        textarea.form-input { min-height: 100px; resize: vertical; }
+
+        /* ========== BUTTONS ========== */
+        .btn {
+            padding: 12px 24px; border-radius: var(--radius); font-size: 14px; font-weight: 600; border: none;
+            cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background: var(--gradient-primary); color: white; }
+        .btn-success { background: var(--gradient-success); color: white; }
+        .btn-danger { background: var(--gradient-danger); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+        .btn-outline:hover { background: var(--bg-input); }
+        .btn-full { width: 100%; }
+        .btn-icon { width: 40px; height: 40px; padding: 0; border-radius: var(--radius-full); }
+        .btn svg { width: 18px; height: 18px; }
+
+        /* ========== TABS ========== */
+        .tabs { display: flex; gap: 8px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; }
+        .tab {
+            padding: 8px 16px; background: var(--bg-card); border: none; border-radius: var(--radius-full);
+            color: var(--text-secondary); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: var(--transition);
+        }
+        .tab.active { background: var(--primary); color: white; }
+
+        /* ========== EMPTY STATE ========== */
+        .empty-state { text-align: center; padding: 48px 24px; }
+        .empty-state svg { width: 64px; height: 64px; color: var(--text-muted); margin-bottom: 16px; }
+        .empty-state h3 { font-size: 18px; margin-bottom: 8px; }
+        .empty-state p { color: var(--text-secondary); font-size: 14px; }
+
+        /* ========== TOAST ========== */
+        .toast {
+            position: absolute; bottom: calc(var(--bottom-nav-height) + 16px); left: 50%;
+            transform: translateX(-50%) translateY(100px); background: #1F2937; padding: 12px 20px;
+            border-radius: var(--radius-full); box-shadow: var(--shadow-lg); z-index: 300; display: flex;
+            align-items: center; gap: 8px; font-size: 14px; opacity: 0; transition: all 0.3s ease; color: white;
+        }
+        .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+        .toast.success { border-left: 4px solid var(--success); }
+        .toast.error { border-left: 4px solid var(--danger); }
+        .toast.info { border-left: 4px solid var(--primary); }
+
+        /* ========== SETTINGS ========== */
+        .settings-group { margin-bottom: 24px; }
+        .settings-title { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; padding: 0 4px; }
+        .settings-item { background: var(--bg-card); padding: 16px; border-radius: var(--radius); display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 8px; }
+        .settings-item:active { background: var(--bg-input); }
+        .settings-item-content { display: flex; align-items: center; gap: 12px; }
+        .settings-icon { width: 36px; height: 36px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; }
+        .settings-icon svg { width: 18px; height: 18px; }
+        .settings-icon.primary { background: rgba(79, 70, 229, 0.2); color: var(--primary-light); }
+        .settings-icon.success { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .settings-icon.danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .settings-icon.warning { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .settings-text h4 { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+        .settings-text p { font-size: 12px; color: var(--text-muted); }
+        .settings-arrow { color: var(--text-muted); }
+        .settings-arrow svg { width: 16px; height: 16px; }
+
+        /* Toggle Switch */
+        .toggle { width: 48px; height: 28px; background: var(--border); border-radius: var(--radius-full); position: relative; cursor: pointer; transition: var(--transition); }
+        .toggle.active { background: var(--primary); }
+        .toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; background: white; border-radius: 50%; transition: var(--transition); }
+        .toggle.active::after { transform: translateX(20px); }
+
+        /* ========== CHARTS ========== */
+        .chart-container { background: var(--bg-card); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+        .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .chart-title { font-size: 16px; font-weight: 600; }
+        .chart-canvas { width: 100%; height: 200px; }
+
+        /* ========== CALCULATOR ========== */
+        .calc-breakdown { background: var(--bg-input); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+        .calc-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .calc-row:last-child { border-bottom: none; }
+        .calc-row.total { font-weight: 700; font-size: 18px; padding-top: 12px; margin-top: 8px; border-top: 2px solid var(--primary); }
+        .calc-label { color: var(--text-secondary); }
+
+        /* ========== PHOTO GRID ========== */
+        .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+        .photo-item { aspect-ratio: 1; border-radius: var(--radius); overflow: hidden; position: relative; }
+        .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-delete { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(239, 68, 68, 0.9); border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .photo-delete svg { width: 14px; height: 14px; }
+        .photo-add { aspect-ratio: 1; border: 2px dashed var(--border); border-radius: var(--radius); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; cursor: pointer; color: var(--text-muted); }
+        .photo-add svg { width: 24px; height: 24px; }
+        .photo-add span { font-size: 11px; }
+
+        /* ========== CONFIRM DIALOG ========== */
+        .confirm-dialog { text-align: center; padding: 24px; }
+        .confirm-icon { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .confirm-icon.danger { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        .confirm-icon svg { width: 32px; height: 32px; }
+        .confirm-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .confirm-message { color: var(--text-secondary); margin-bottom: 24px; }
+        .confirm-buttons { display: flex; gap: 12px; }
+        .confirm-buttons .btn { flex: 1; }
+
+        /* ========== PAYMENT HISTORY ========== */
+        .payment-item { background: var(--bg-card); border-radius: var(--radius); padding: 12px; margin-bottom: 8px; }
+        .payment-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .payment-date { font-size: 13px; color: var(--text-secondary); }
+        .payment-amount { font-weight: 600; }
+        .payment-note { font-size: 12px; color: var(--text-muted); }
+
+        /* ========== SCROLLBAR ========== */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* ========== ANIMATIONS ========== */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .fade-in { animation: fadeIn 0.3s ease; }
+        .slide-up { animation: slideUp 0.3s ease; }
+        
+        .type-badge { padding: 2px 8px; border-radius: var(--radius-full); font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .type-badge.long-term { background: rgba(79, 70, 229, 0.2); color: var(--primary-light); }
+        .type-badge.short-term { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .type-badge.custom { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .type-badge.guest { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+        .type-badge.bedspace { background: rgba(14, 165, 233, 0.2); color: #0ea5e9; }
+        .type-badge.general { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <!-- Lock Screen -->
+        <div id="lock-screen" class="hidden">
+            <div class="lock-logo">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 3L4 9v12h16V9l-8-6zm0 2.5L18 10v9H6v-9l6-4.5z"/>
+                    <path d="M12 14c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+                </svg>
+            </div>
+            <h1 class="lock-title">RentalRMS</h1>
+            <p class="lock-subtitle" id="lock-subtitle">Enter your PIN</p>
+            
+            <div class="pin-display">
+                <div class="pin-dot" data-index="0"></div>
+                <div class="pin-dot" data-index="1"></div>
+                <div class="pin-dot" data-index="2"></div>
+                <div class="pin-dot" data-index="3"></div>
+            </div>
+            
+            <div class="numpad">
+                <button class="num-btn" data-num="1">1</button>
+                <button class="num-btn" data-num="2">2</button>
+                <button class="num-btn" data-num="3">3</button>
+                <button class="num-btn" data-num="4">4</button>
+                <button class="num-btn" data-num="5">5</button>
+                <button class="num-btn" data-num="6">6</button>
+                <button class="num-btn" data-num="7">7</button>
+                <button class="num-btn" data-num="8">8</button>
+                <button class="num-btn" data-num="9">9</button>
+                <button class="num-btn action" data-action="clear">Clear</button>
+                <button class="num-btn" data-num="0">0</button>
+                <button class="num-btn action" data-action="delete">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                        <path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 12.59L17.59 17 14 13.41 10.41 17 9 15.59 12.59 12 9 8.41 10.41 7 14 10.59 17.59 7 19 8.41 15.41 12 19 15.59z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content">
+            <!-- Header -->
+            <header class="header">
+                <button class="icon-btn" id="menu-btn" title="Menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div class="header-logo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" width="28" height="28">
+                        <path d="M12 3L4 9v12h16V9l-8-6z"/>
+                        <path d="M12 14c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2z"/>
+                    </svg>
+                    <span class="header-title" style="font-size:18px;margin-left:4px;">RentalRMS</span>
+                </div>
+                <div class="header-avatar" id="user-avatar">
+                    <div class="avatar-initials">CD</div>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                </div>
+            </header>
+
+            <!-- Dashboard Page -->
+            <div class="page active" id="page-dashboard">
+                <!-- Welcome Section -->
+                <div class="welcome-section">
+                    <div class="greeting">
+                        <span class="greeting-icon">🌅</span>
+                        <div>
+                            <h2 id="greeting-text">Good Morning, Dan Michael Bucoy</h2>
+                            <div class="date-display">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                <span id="current-date">Monday, March 2, 2026</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alert-badge" id="alert-badge" style="display: none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                        </svg>
+                        <span id="alert-text">1 Expiring Soon</span>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card primary">
+                        <div class="stat-header-row">
+                            <span class="stat-title">Tenants</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" width="20" height="20">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="total-tenants">0</div>
+                        <div class="stat-label">Active tenants with leases</div>
+                        <div class="stat-badges">
+                            <span class="badge success" id="active-tenants-badge">0 Active</span>
+                            <span class="badge danger" id="inactive-tenants-badge">0 Inactive</span>
+                        </div>
+                        <button class="stat-arrow" onclick="UI.navigate('tenants')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="stat-card primary">
+                        <div class="stat-header-row">
+                            <span class="stat-title">Properties</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" width="20" height="20">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9 22 9 12 15 12 15 22"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="properties-count">0</div>
+                        <div class="stat-label">Total number of properties</div>
+                        <button class="stat-arrow" onclick="UI.navigate('rentals')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="stat-card primary">
+                        <div class="stat-header-row">
+                            <span class="stat-title">Occupancy Rate</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" width="20" height="20">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6v6l4 2"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value" id="occupancy-rate">0%</div>
+                        <div class="stat-label">Percentage of occupied properties</div>
+                        <button class="stat-arrow" onclick="UI.navigate('reports')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="stat-card primary">
+                        <div class="stat-header-row">
+                            <span class="stat-title">Revenue</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" width="20" height="20">
+                                <line x1="12" y1="1" x2="12" y2="23"/>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                            </svg>
+                        </div>
+                        <div class="stat-value revenue" id="total-income">₱0</div>
+                        <div class="stat-label">Total revenue from rents</div>
+                        <button class="stat-arrow" onclick="UI.navigate('reports')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collection Rate Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3>Collection Rate</h3>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <line x1="18" y1="20" x2="18" y2="10"/>
+                            <line x1="12" y1="20" x2="12" y2="4"/>
+                            <line x1="6" y1="20" x2="6" y2="14"/>
+                        </svg>
+                    </div>
+                    <div class="collection-content">
+                        <div class="progress-ring">
+                            <svg viewBox="0 0 100 100">
+                                <circle class="progress-bg" cx="50" cy="50" r="40"/>
+                                <circle class="progress-fill" id="collection-progress" cx="50" cy="50" r="40" style="stroke-dasharray: 0 251;"/>
+                            </svg>
+                            <div class="progress-text">
+                                <span class="progress-value" id="collection-rate-value">0%</span>
+                                <span class="progress-label">Collected</span>
+                            </div>
+                        </div>
+                        <div class="collection-info">
+                            <span class="collection-label">Collected this month</span>
+                            <button class="section-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lease Pipeline Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3>LEASE PIPELINE</h3>
+                    </div>
+                    <div class="pipeline-grid">
+                        <div class="pipeline-item">
+                            <div class="pipeline-value primary" id="active-leases">0</div>
+                            <div class="pipeline-title">ACTIVE LEASES</div>
+                            <div class="pipeline-desc">Currently running</div>
+                        </div>
+                        <div class="pipeline-item">
+                            <div class="pipeline-value danger" id="expiring-30">0</div>
+                            <div class="pipeline-title">EXPIRING ≤30 DAYS</div>
+                            <div class="pipeline-desc">Needs renewal action</div>
+                        </div>
+                        <div class="pipeline-item">
+                            <div class="pipeline-value warning" id="expiring-60">0</div>
+                            <div class="pipeline-title">EXPIRING 31-60 DAYS</div>
+                            <div class="pipeline-desc">Plan ahead</div>
+                        </div>
+                        <div class="pipeline-item">
+                            <div class="pipeline-value success" id="extended-year">0</div>
+                            <div class="pipeline-title">EXTENDED 2026</div>
+                            <div class="pipeline-desc">Renewals this year</div>
+                        </div>
+                    </div>
+                    <button class="view-all-btn">
+                        View All
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <polyline points="9 18 15 12 9 6"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Payment Status Section -->
+                <div class="section-card">
+                    <div class="section-header">
+                        <h3>Payment Status</h3>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                            <line x1="1" y1="10" x2="23" y2="10"/>
+                        </svg>
+                    </div>
+                    <div class="payment-status-grid">
+                        <div class="payment-status-item purple">
+                            <div class="payment-status-header">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                </svg>
+                                This Month
+                            </div>
+                            <div class="payment-columns">
+                                <div class="payment-col">
+                                    <span class="payment-label">Due</span>
+                                    <span class="payment-value" id="payment-due">₱0</span>
+                                </div>
+                                <div class="payment-col">
+                                    <span class="payment-label">Paid</span>
+                                    <span class="payment-value" id="payment-paid">₱0</span>
+                                </div>
+                                <div class="payment-col">
+                                    <span class="payment-label">Pending</span>
+                                    <span class="payment-value" id="payment-pending">₱0</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="payment-status-item red">
+                            <div class="payment-status-header">
+                                <svg viewBox="0 0 24 24" fill="#EF4444" width="16" height="16">
+                                    <path d="M12 2L1 21h22L12 2zm0 3.17L19.83 19H4.17L12 5.17zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
+                                </svg>
+                                Past Due
+                            </div>
+                            <div class="payment-status-value danger" id="past-due">₱0</div>
+                            <div class="payment-status-label">Past months</div>
+                        </div>
+                        <div class="payment-status-item green">
+                            <div class="payment-status-header">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" width="16" height="16">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <polyline points="16 10 10.5 15 8 12.5"/>
+                                </svg>
+                                Collected
+                            </div>
+                            <div class="payment-status-value success" id="total-collected">₱0</div>
+                            <div class="payment-status-label">All time</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-title">
+                    <span>Recent Activity</span>
+                </div>
+                <div class="activity-list" id="activity-list">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <line x1="16" y1="2" x2="16" y2="6"/>
+                            <line x1="8" y1="2" x2="8" y2="6"/>
+                            <line x1="3" y1="10" x2="21" y2="10"/>
+                        </svg>
+                        <h3>No Activity Yet</h3>
+                        <p>Start adding rentals to see activity</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Floating Action Button for all pages -->
+            <button class="fab" id="fab-add">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </button>
+
+            <!-- Rentals Page -->
+            <div class="page" id="page-rentals">
+                <div class="tabs" id="rental-tabs">
+                    <button class="tab active" data-filter="all">All</button>
+                    <button class="tab" data-filter="active">Active</button>
+                    <button class="tab" data-filter="pending">Pending</button>
+                    <button class="tab" data-filter="overdue">Overdue</button>
+                </div>
+                <div class="card-list" id="rentals-list">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                            <polyline points="9,22 9,12 15,12 15,22"/>
+                        </svg>
+                        <h3>No Rentals</h3>
+                        <p>Add your first rental property</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tenants Page -->
+            <div class="page" id="page-tenants">
+                <div class="tabs" id="tenant-tabs">
+                    <button class="tab active" data-filter="all">All</button>
+                    <button class="tab" data-filter="active">Active</button>
+                    <button class="tab" data-filter="inactive">Inactive</button>
+                </div>
+                <div class="card-list" id="tenants-list">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                        </svg>
+                        <h3>No Tenants</h3>
+                        <p>Add your first tenant</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reports Page -->
+            <div class="page" id="page-reports">
+                <div class="tabs" id="report-tabs">
+                    <button class="tab active" data-period="daily">Daily</button>
+                    <button class="tab" data-period="monthly">Monthly</button>
+                    <button class="tab" data-period="yearly">Yearly</button>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <h3 class="chart-title">Income Overview</h3>
+                    </div>
+                    <canvas id="income-chart" class="chart-canvas"></canvas>
+                </div>
+
+                <div class="section-title">
+                    <span>Summary</span>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-card success">
+                        <div class="stat-value" id="report-collected">$0</div>
+                        <div class="stat-label">Collected</div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="stat-value" id="report-pending">$0</div>
+                        <div class="stat-label">Pending</div>
+                    </div>
+                </div>
+
+                <div class="section-title" style="margin-top: 20px;">
+                    <span>Export Options</span>
+                </div>
+                <div class="flex gap-3">
+                    <button class="btn btn-outline flex-1" id="export-pdf">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14,2 14,8 20,8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10,9 9,9 8,9"/>
+                        </svg>
+                        Export PDF
+                    </button>
+                    <button class="btn btn-outline flex-1" id="export-csv">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div class="page" id="page-settings">
+                <div class="settings-group">
+                    <div class="settings-title">Business</div>
+                    <div class="settings-item" id="settings-business">
+                        <div class="settings-item-content">
+                            <div class="settings-icon primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                    <polyline points="9,22 9,12 15,12 15,22"/>
+                                </svg>
+                            </div>
+                            <div class="settings-text">
+                                <h4>Business Info</h4>
+                                <p>Name, address, contact</p>
+                            </div>
+                        </div>
+                        <div class="settings-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9,18 15,12 9,6"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-title">Security</div>
+                    <div class="settings-item" id="settings-pin">
+                        <div class="settings-item-content">
+                            <div class="settings-icon primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                </svg>
+                            </div>
+                            <div class="settings-text">
+                                <h4>Change PIN</h4>
+                                <p>Update your access PIN</p>
+                            </div>
+                        </div>
+                        <div class="settings-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9,18 15,12 9,6"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-title">Data</div>
+                    <div class="settings-item" id="settings-backup">
+                        <div class="settings-item-content">
+                            <div class="settings-icon success">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17,8 12,3 7,8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                            </div>
+                            <div class="settings-text">
+                                <h4>Backup Data</h4>
+                                <p>Export all data as JSON</p>
+                            </div>
+                        </div>
+                        <div class="settings-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9,18 15,12 9,6"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="settings-item" id="settings-restore">
+                        <div class="settings-item-content">
+                            <div class="settings-icon warning">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7,10 12,15 17,10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </div>
+                            <div class="settings-text">
+                                <h4>Restore Data</h4>
+                                <p>Import from backup file</p>
+                            </div>
+                        </div>
+                        <div class="settings-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9,18 15,12 9,6"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="settings-item" id="settings-clear">
+                        <div class="settings-item-content">
+                            <div class="settings-icon danger">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3,6 5,6 21,6"/>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"/>
+                                    <line x1="10" y1="11" x2="10" y2="17"/>
+                                    <line x1="14" y1="11" x2="14" y2="17"/>
+                                </svg>
+                            </div>
+                            <div class="settings-text">
+                                <h4>Clear All Data</h4>
+                                <p>Delete everything</p>
+                            </div>
+                        </div>
+                        <div class="settings-arrow">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="9,18 15,12 9,6"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-group">
+                    <div class="settings-title">About</div>
+                    <div class="settings-item">
+                        <div class="settings-item-content">
+                            <div class="settings-icon primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <line x1="12" y1="16" x2="12" y2="12"/>
+                                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                                </svg>
+                            </div>
+                            <div class="settings-text">
+                                <h4>Version 2.0</h4>
+                                <p>RentalRMS App</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn btn-danger btn-full" id="logout-btn" style="margin-top: 24px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                        <polyline points="16,17 21,12 16,7"/>
+                        <line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Logout
+                </button>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <nav class="bottom-nav">
+                <button class="nav-item active" data-page="dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="3" y="3" width="7" height="7"/>
+                        <rect x="14" y="3" width="7" height="7"/>
+                        <rect x="14" y="14" width="7" height="7"/>
+                        <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                    <span class="nav-label">Dashboard</span>
+                </button>
+                <button class="nav-item" data-page="rentals">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                        <polyline points="9,22 9,12 15,12 15,22"/>
+                    </svg>
+                    <span class="nav-label">Properties</span>
+                </button>
+                <button class="nav-item" data-page="tenants">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    <span class="nav-label">Tenants</span>
+                </button>
+                <button class="nav-item" data-page="reports">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    <span class="nav-label">Reports</span>
+                </button>
+                <button class="nav-item" data-page="settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                    </svg>
+                    <span class="nav-label">Settings</span>
+                </button>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Modal Container -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal-container">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Modal Title</h2>
+                <button class="modal-close" id="modal-close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                <!-- Dynamic content -->
+            </div>
+            <div class="modal-footer" id="modal-footer">
+                <!-- Dynamic buttons -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span id="toast-message">Message</span>
+    </div>
+
+    <!-- Hidden file inputs -->
+    <input type="file" id="file-input" accept=".json" style="display: none;">
+    <input type="file" id="photo-input" accept="image/*" capture="environment" style="display: none;">
+
+    <script>
+        // ========== PREVENT NATIVE BROWSER BEHAVIORS FOR APP FEEL ==========
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(e) {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) {
+                // Prevent double-tap zoom unless we are tapping an input
+                if (!e.target.matches('input, textarea, select, button, .num-btn')) {
+                    e.preventDefault();
+                }
+            }
+            lastTouchEnd = now;
+        }, { passive: false });
+
+        document.addEventListener('touchmove', function(e) {
+            // Prevent pinch zoom
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // ========== MAIN APPLICATION ==========
+        const App = {
+            db: null,
+            currentUser: null,
+            inactivityTimer: null,
+            inactivityTimeout: 5 * 60 * 1000, // 5 minutes
+            chart: null,
+            currentFilter: 'all',
+            reportPeriod: 'daily',
+
+            async init() {
+                await DB.init();
+                Auth.init();
+                UI.init();
+                this.startInactivityTimer();
+                this.registerServiceWorker();
+            },
+
+            registerServiceWorker() {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('sw.js').then(reg => {
+                        console.log('[App] Service Worker registered successfully');
+                        
+                        // Check for updates immediately
+                        reg.update();
+                        
+                        // Listen for updates to the service worker
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            console.log('[App] New service worker found, installing...');
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // A new update is available
+                                    console.log('[App] New update ready!');
+                                    if (confirm('A new update is available! Reload to apply?')) {
+                                        newWorker.postMessage({ action: 'skipWaiting' });
+                                    }
+                                }
+                            });
+                        });
+                    }).catch(err => console.log('[App] SW registration failed:', err));
+
+                    // Reload when the new service worker takes over
+                    let refreshing;
+                    navigator.serviceWorker.addEventListener('controllerchange', () => {
+                        if (refreshing) return;
+                        console.log('[App] Controller changed, reloading...');
+                        refreshing = true;
+                        window.location.reload();
+                    });
+                }
+            },
+
+            startInactivityTimer() {
+                document.addEventListener('touchstart', () => this.resetInactivityTimer(), {passive: true});
+                document.addEventListener('click', () => this.resetInactivityTimer(), {passive: true});
+                this.resetInactivityTimer();
+            },
+
+            resetInactivityTimer() {
+                clearTimeout(this.inactivityTimer);
+                this.inactivityTimer = setTimeout(() => {
+                    if (!document.getElementById('lock-screen').classList.contains('hidden')) return;
+                    Auth.lock();
+                }, this.inactivityTimeout);
+            }
+        };
+
+        // ========== DATABASE MODULE ==========
+        const DB = {
+            name: 'smart_rental_db',
+            version: 1,
+            db: null,
+
+            async init() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.name, this.version);
+
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        resolve();
+                    };
+
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+
+                        if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings', { keyPath: 'key' });
+                        if (!db.objectStoreNames.contains('tenants')) {
+                            const tenantStore = db.createObjectStore('tenants', { keyPath: 'id', autoIncrement: true });
+                            tenantStore.createIndex('name', 'name', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains('rentals')) {
+                            const rentalStore = db.createObjectStore('rentals', { keyPath: 'id', autoIncrement: true });
+                            rentalStore.createIndex('tenantId', 'tenantId', { unique: false });
+                            rentalStore.createIndex('status', 'status', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains('payments')) {
+                            const paymentStore = db.createObjectStore('payments', { keyPath: 'id', autoIncrement: true });
+                            paymentStore.createIndex('rentalId', 'rentalId', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains('photos')) {
+                            const photoStore = db.createObjectStore('photos', { keyPath: 'id', autoIncrement: true });
+                            photoStore.createIndex('entityType', 'entityType', { unique: false });
+                            photoStore.createIndex('entityId', 'entityId', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains('activities')) {
+                            const activityStore = db.createObjectStore('activities', { keyPath: 'id', autoIncrement: true });
+                            activityStore.createIndex('timestamp', 'timestamp', { unique: false });
+                        }
+                    };
+                });
+            },
+
+            async get(storeName, key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(storeName, 'readonly');
+                    const request = tx.objectStore(storeName).get(key);
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            async getAll(storeName) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(storeName, 'readonly');
+                    const request = tx.objectStore(storeName).getAll();
+                    request.onsuccess = () => resolve(request.result ||[]);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            async add(storeName, data) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(storeName, 'readwrite');
+                    const request = tx.objectStore(storeName).add({ ...data, createdAt: new Date().toISOString() });
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            async put(storeName, data) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(storeName, 'readwrite');
+                    const request = tx.objectStore(storeName).put({ ...data, updatedAt: new Date().toISOString() });
+                    request.onsuccess = () => resolve(request.result);
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            async delete(storeName, key) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(storeName, 'readwrite');
+                    const request = tx.objectStore(storeName).delete(key);
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            async clear(storeName) {
+                return new Promise((resolve, reject) => {
+                    const tx = this.db.transaction(storeName, 'readwrite');
+                    const request = tx.objectStore(storeName).clear();
+                    request.onsuccess = () => resolve();
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            async clearAll() {
+                const stores =['settings', 'tenants', 'rentals', 'payments', 'photos', 'activities'];
+                for (const store of stores) await this.clear(store);
+            },
+
+            async exportAll() {
+                const data = {};
+                const stores =['settings', 'tenants', 'rentals', 'payments', 'photos', 'activities'];
+                for (const store of stores) data[store] = await this.getAll(store);
+                return data;
+            },
+
+            async importAll(data) {
+                await this.clearAll();
+                for (const [storeName, items] of Object.entries(data)) {
+                    for (const item of items) await this.add(storeName, item);
+                }
+            }
+        };
+
+        // ========== AUTH MODULE ==========
+        const Auth = {
+            pin: '',
+            confirmPin: '',
+            isSetup: false,
+            isConfirming: false,
+
+            init() {
+                this.checkSetup();
+                this.bindEvents();
+            },
+
+            async checkSetup() {
+                const settings = await DB.get('settings', 'pin');
+                this.isSetup = !!settings;
+                
+                const lockScreen = document.getElementById('lock-screen');
+                const subtitle = document.getElementById('lock-subtitle');
+                
+                if (!this.isSetup) subtitle.textContent = 'Create a 4-digit PIN';
+                lockScreen.classList.remove('hidden');
+            },
+
+            bindEvents() {
+                document.querySelectorAll('.num-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        // Prevent zoom specifically on these fast-tap buttons
+                        e.preventDefault();
+                        const target = e.currentTarget;
+                        const num = target.dataset.num;
+                        const action = target.dataset.action;
+                        
+                        if (num) this.addDigit(num);
+                        else if (action === 'clear') this.clear();
+                        else if (action === 'delete') this.delete();
+                    });
+                });
+            },
+
+            addDigit(digit) {
+                if (this.pin.length >= 4) return;
+                this.pin += digit;
+                this.updateDisplay();
+                if (this.pin.length === 4) setTimeout(() => this.verify(), 200);
+            },
+
+            clear() {
+                this.pin = '';
+                this.updateDisplay();
+            },
+
+            delete() {
+                this.pin = this.pin.slice(0, -1);
+                this.updateDisplay();
+            },
+
+            updateDisplay() {
+                const dots = document.querySelectorAll('.pin-dot');
+                dots.forEach((dot, i) => {
+                    dot.classList.remove('filled', 'error');
+                    if (i < this.pin.length) dot.classList.add('filled');
+                });
+            },
+
+            async verify() {
+                const subtitle = document.getElementById('lock-subtitle');
+                const dots = document.querySelectorAll('.pin-dot');
+
+                if (!this.isSetup) {
+                    if (!this.isConfirming) {
+                        this.confirmPin = this.pin;
+                        this.pin = '';
+                        this.isConfirming = true;
+                        subtitle.textContent = 'Confirm your PIN';
+                        this.updateDisplay();
+                    } else {
+                        if (this.pin === this.confirmPin) {
+                            await DB.put('settings', { key: 'pin', value: btoa(this.pin) });
+                            this.unlock();
+                        } else {
+                            dots.forEach(d => d.classList.add('error'));
+                            subtitle.textContent = 'PINs do not match. Try again';
+                            this.pin = '';
+                            this.confirmPin = '';
+                            this.isConfirming = false;
+                            setTimeout(() => {
+                                subtitle.textContent = 'Create a 4-digit PIN';
+                                this.updateDisplay();
+                            }, 1000);
+                        }
+                    }
+                } else {
+                    const settings = await DB.get('settings', 'pin');
+                    if (btoa(this.pin) === settings.value) {
+                        this.unlock();
+                    } else {
+                        dots.forEach(d => d.classList.add('error'));
+                        subtitle.textContent = 'Incorrect PIN';
+                        this.pin = '';
+                        setTimeout(() => {
+                            subtitle.textContent = 'Enter your PIN';
+                            this.updateDisplay();
+                        }, 1000);
+                    }
+                }
+            },
+
+            unlock() {
+                document.getElementById('lock-screen').classList.add('hidden');
+                this.pin = '';
+                this.confirmPin = '';
+                this.isConfirming = false;
+                UI.refreshDashboard();
+            },
+
+            lock() {
+                document.getElementById('lock-screen').classList.remove('hidden');
+                document.getElementById('lock-subtitle').textContent = 'Enter your PIN';
+                this.pin = '';
+                this.updateDisplay();
+            },
+
+            async changePin(oldPin, newPin) {
+                const settings = await DB.get('settings', 'pin');
+                if (btoa(oldPin) !== settings.value) return false;
+                await DB.put('settings', { key: 'pin', value: btoa(newPin) });
+                return true;
+            }
+        };
+
+        // ========== UI MODULE ==========
+        const UI = {
+            currentPage: 'dashboard',
+
+            init() {
+                this.bindEvents();
+                this.refreshDashboard();
+            },
+
+            bindEvents() {
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.addEventListener('click', () => this.navigate(item.dataset.page));
+                });
+
+                document.getElementById('fab-add').addEventListener('click', () => RentalManager.showAddModal());
+                document.getElementById('fab-add-rental').addEventListener('click', () => RentalManager.showAddModal());
+                document.getElementById('fab-add-tenant').addEventListener('click', () => TenantManager.showAddModal());
+
+                document.getElementById('modal-close').addEventListener('click', () => this.closeModal());
+                document.getElementById('modal-overlay').addEventListener('click', (e) => {
+                    if (e.target.id === 'modal-overlay') this.closeModal();
+                });
+
+                document.getElementById('rental-tabs').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tab')) {
+                        document.querySelectorAll('#rental-tabs .tab').forEach(t => t.classList.remove('active'));
+                        e.target.classList.add('active');
+                        App.currentFilter = e.target.dataset.filter;
+                        this.refreshRentals();
+                    }
+                });
+
+                document.getElementById('tenant-tabs').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tab')) {
+                        document.querySelectorAll('#tenant-tabs .tab').forEach(t => t.classList.remove('active'));
+                        e.target.classList.add('active');
+                        App.currentFilter = e.target.dataset.filter;
+                        this.refreshTenants();
+                    }
+                });
+
+                document.getElementById('report-tabs').addEventListener('click', (e) => {
+                    if (e.target.classList.contains('tab')) {
+                        document.querySelectorAll('#report-tabs .tab').forEach(t => t.classList.remove('active'));
+                        e.target.classList.add('active');
+                        App.reportPeriod = e.target.dataset.period;
+                        this.refreshReports();
+                    }
+                });
+
+                document.getElementById('settings-business').addEventListener('click', () => this.showBusinessModal());
+                document.getElementById('settings-pin').addEventListener('click', () => this.showPinChangeModal());
+                document.getElementById('settings-backup').addEventListener('click', () => this.backupData());
+                document.getElementById('settings-restore').addEventListener('click', () => document.getElementById('file-input').click());
+                document.getElementById('settings-clear').addEventListener('click', () => this.showClearDataModal());
+                document.getElementById('logout-btn').addEventListener('click', () => Auth.lock());
+
+                document.getElementById('file-input').addEventListener('change', (e) => this.restoreData(e));
+                document.getElementById('export-pdf').addEventListener('click', () => ReportGenerator.exportPDF());
+                document.getElementById('export-csv').addEventListener('click', () => ReportGenerator.exportCSV());
+            },
+
+            navigate(page) {
+                this.currentPage = page;
+                
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.toggle('active', item.dataset.page === page);
+                });
+                
+                document.querySelectorAll('.page').forEach(p => {
+                    p.classList.toggle('active', p.id === `page-${page}`);
+                });
+
+                const titles = { dashboard: 'Dashboard', rentals: 'Rentals', tenants: 'Tenants', reports: 'Reports', settings: 'Settings' };
+                // document.getElementById('page-title').textContent = titles[page]; // Not used in this header layout
+
+                // Manage FAB visibility - only show on list pages
+                const fab = document.getElementById('fab-add');
+                if(page === 'dashboard' || page === 'settings' || page === 'reports') {
+                    fab.classList.add('hidden');
+                } else {
+                    fab.classList.remove('hidden');
+                    // Switch fab behavior
+                    fab.onclick = () => page === 'rentals' ? RentalManager.showAddModal() : TenantManager.showAddModal();
+                }
+
+                if (page === 'dashboard') this.refreshDashboard();
+                else if (page === 'rentals') this.refreshRentals();
+                else if (page === 'tenants') this.refreshTenants();
+                else if (page === 'reports') this.refreshReports();
+            },
+
+            async refreshDashboard() {
+                const rentals = await DB.getAll('rentals');
+                const tenants = await DB.getAll('tenants');
+                const payments = await DB.getAll('payments');
+                const activities = await DB.getAll('activities');
+
+                const activeRentals = rentals.filter(r => r.status === 'active');
+                const overdueRentals = rentals.filter(r => r.status === 'overdue');
+                const paidRentals = rentals.filter(r => r.status === 'paid');
+                const pendingRentals = rentals.filter(r => r.status === 'pending');
+                
+                const totalIncome = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                const totalDue = rentals.reduce((sum, r) => sum + (r.totalAmount || 0), 0);
+                const totalBalance = rentals.reduce((sum, r) => sum + (r.balance || 0), 0);
+                
+                const properties = new Set(rentals.map(r => r.propertyName)).size;
+                
+                const activeTenantIds = new Set(activeRentals.map(r => r.tenantId));
+                const activeTenantsCount = tenants.filter(t => activeTenantIds.has(t.id)).length;
+                const inactiveTenantsCount = tenants.length - activeTenantsCount;
+                
+                const occupancyRate = tenants.length > 0 ? Math.round((activeTenantsCount / tenants.length) * 100) : 0;
+                const collectionRate = totalDue > 0 ? Math.round((totalIncome / totalDue) * 100) : 0;
+
+                const hour = new Date().getHours();
+                let greeting = 'Good Morning';
+                if (hour >= 12 && hour < 17) greeting = 'Good Afternoon';
+                else if (hour >= 17) greeting = 'Good Evening';
+                document.getElementById('greeting-text').textContent = `${greeting}, Dan Michael Bucoy`;
+                
+                const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', options);
+
+                document.getElementById('total-tenants').textContent = tenants.length;
+                document.getElementById('properties-count').textContent = properties;
+                document.getElementById('occupancy-rate').textContent = occupancyRate + '%';
+                document.getElementById('total-income').textContent = this.formatCurrency(totalIncome);
+                
+                document.getElementById('active-tenants-badge').textContent = activeTenantsCount + ' Active';
+                document.getElementById('inactive-tenants-badge').textContent = inactiveTenantsCount + ' Inactive';
+                
+                const alertBadge = document.getElementById('alert-badge');
+                if (overdueRentals.length > 0) {
+                    alertBadge.style.display = 'inline-flex';
+                    document.getElementById('alert-text').textContent = overdueRentals.length + ' Expiring Soon';
+                } else {
+                    alertBadge.style.display = 'none';
+                }
+                
+                document.getElementById('collection-rate-value').textContent = collectionRate + '%';
+                const progressCircle = document.getElementById('collection-progress');
+                if (progressCircle) {
+                    const circumference = 2 * Math.PI * 40;
+                    const offset = circumference - (collectionRate / 100) * circumference;
+                    progressCircle.style.strokeDasharray = `${circumference - offset} ${circumference}`;
+                }
+                
+                document.getElementById('active-leases').textContent = activeRentals.length;
+                document.getElementById('expiring-30').textContent = overdueRentals.length;
+                document.getElementById('expiring-60').textContent = pendingRentals.length;
+                document.getElementById('extended-year').textContent = paidRentals.length;
+                
+                document.getElementById('payment-due').textContent = this.formatCurrency(totalDue);
+                document.getElementById('payment-paid').textContent = this.formatCurrency(totalIncome);
+                document.getElementById('payment-pending').textContent = this.formatCurrency(totalBalance);
+                document.getElementById('past-due').textContent = this.formatCurrency(0);
+                document.getElementById('total-collected').textContent = this.formatCurrency(totalIncome);
+
+                const activityList = document.getElementById('activity-list');
+                const recentActivities = activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 10);
+
+                if (recentActivities.length === 0) {
+                    activityList.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            <h3>No Activity Yet</h3>
+                            <p>Start adding rentals to see activity</p>
+                        </div>
+                    `;
+                } else {
+                    activityList.innerHTML = recentActivities.map(a => `
+                        <div class="activity-item">
+                            <div class="activity-icon ${a.type}">
+                                ${this.getActivityIcon(a.type)}
+                            </div>
+                            <div class="activity-content">
+                                <div class="activity-text">${a.description}</div>
+                                <div class="activity-time">${this.formatDate(a.timestamp)}</div>
+                            </div>
+                            ${a.amount ? `<div class="activity-amount ${a.amount > 0 ? 'positive' : 'negative'}">${a.amount > 0 ? '+' : ''}${this.formatCurrency(a.amount)}</div>` : ''}
+                        </div>
+                    `).join('');
+                }
+            },
+
+            async refreshRentals() {
+                const rentals = await DB.getAll('rentals');
+                const tenants = await DB.getAll('tenants');
+                const tenantMap = new Map(tenants.map(t => [t.id, t]));
+
+                let filtered = rentals;
+                if (App.currentFilter !== 'all') {
+                    filtered = rentals.filter(r => r.status === App.currentFilter);
+                }
+
+                const container = document.getElementById('rentals-list');
+                
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                <polyline points="9,22 9,12 15,12 15,22"/>
+                            </svg>
+                            <h3>No Rentals</h3>
+                            <p>Add your first rental property</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(r => {
+                    const tenant = tenantMap.get(r.tenantId);
+                    const initials = tenant ? tenant.name.split(' ').map(n => n[0]).join('').toUpperCase() : '?';
+                    
+                    return `
+                        <div class="rental-card" onclick="RentalManager.showDetail(${r.id})">
+                            <div class="rental-avatar">${tenant?.photo ? `<img src="${tenant.photo}" alt="">` : initials}</div>
+                            <div class="rental-info">
+                                <div class="rental-name">${tenant?.name || 'Unknown Tenant'}</div>
+                                <div class="rental-details">
+                                    <span class="type-badge ${r.type}">${this.formatType(r.type)}</span>
+                                    <span>${r.propertyName || 'Property'}</span>
+                                </div>
+                            </div>
+                            <div class="rental-status">
+                                <span class="status-badge ${r.status}">${r.status}</span>
+                                <div class="rental-amount">${this.formatCurrency(r.totalAmount || 0)}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            async refreshTenants() {
+                const tenants = await DB.getAll('tenants');
+                const rentals = await DB.getAll('rentals');
+
+                let filtered = tenants;
+                if (App.currentFilter !== 'all') {
+                    if (App.currentFilter === 'active') {
+                        const activeTenantIds = new Set(rentals.filter(r => r.status === 'active').map(r => r.tenantId));
+                        filtered = tenants.filter(t => activeTenantIds.has(t.id));
+                    } else {
+                        const activeTenantIds = new Set(rentals.filter(r => r.status === 'active').map(r => r.tenantId));
+                        filtered = tenants.filter(t => !activeTenantIds.has(t.id));
+                    }
+                }
+
+                const container = document.getElementById('tenants-list');
+                
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <h3>No Tenants</h3>
+                            <p>Add your first tenant</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = filtered.map(t => {
+                    const initials = t.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                    const tenantRentals = rentals.filter(r => r.tenantId === t.id);
+                    const hasActive = tenantRentals.some(r => r.status === 'active');
+                    
+                    return `
+                        <div class="rental-card" onclick="TenantManager.showDetail(${t.id})">
+                            <div class="rental-avatar">${t.photo ? `<img src="${t.photo}" alt="">` : initials}</div>
+                            <div class="rental-info">
+                                <div class="rental-name">${t.name}</div>
+                                <div class="rental-details">
+                                    <span>${t.contact || 'No contact'}</span>
+                                    <span>•</span>
+                                    <span>${tenantRentals.length} rentals</span>
+                                </div>
+                            </div>
+                            <div class="rental-status">
+                                <span class="status-badge ${hasActive ? 'active' : 'pending'}">${hasActive ? 'Active' : 'Inactive'}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            },
+
+            async refreshReports() {
+                const payments = await DB.getAll('payments');
+                const rentals = await DB.getAll('rentals');
+                
+                const now = new Date();
+                let labels = [];
+                let data =[];
+                
+                if (App.reportPeriod === 'daily') {
+                    for (let i = 6; i >= 0; i--) {
+                        const date = new Date(now);
+                        date.setDate(date.getDate() - i);
+                        labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+                        
+                        const dayPayments = payments.filter(p => {
+                            const pDate = new Date(p.createdAt);
+                            return pDate.toDateString() === date.toDateString();
+                        });
+                        data.push(dayPayments.reduce((sum, p) => sum + (p.amount || 0), 0));
+                    }
+                } else if (App.reportPeriod === 'monthly') {
+                    for (let i = 5; i >= 0; i--) {
+                        const date = new Date(now);
+                        date.setMonth(date.getMonth() - i);
+                        labels.push(date.toLocaleDateString('en-US', { month: 'short' }));
+                        
+                        const monthPayments = payments.filter(p => {
+                            const pDate = new Date(p.createdAt);
+                            return pDate.getMonth() === date.getMonth() && pDate.getFullYear() === date.getFullYear();
+                        });
+                        data.push(monthPayments.reduce((sum, p) => sum + (p.amount || 0), 0));
+                    }
+                } else {
+                    for (let i = 4; i >= 0; i--) {
+                        const date = new Date(now);
+                        date.setFullYear(date.getFullYear() - i);
+                        labels.push(date.getFullYear().toString());
+                        
+                        const yearPayments = payments.filter(p => {
+                            const pDate = new Date(p.createdAt);
+                            return pDate.getFullYear() === date.getFullYear();
+                        });
+                        data.push(yearPayments.reduce((sum, p) => sum + (p.amount || 0), 0));
+                    }
+                }
+
+                this.updateChart(labels, data);
+
+                const collected = data.reduce((sum, d) => sum + d, 0);
+                const pending = rentals.filter(r => r.status === 'pending' || r.status === 'overdue')
+                    .reduce((sum, r) => sum + (r.balance || 0), 0);
+                
+                document.getElementById('report-collected').textContent = this.formatCurrency(collected);
+                document.getElementById('report-pending').textContent = this.formatCurrency(pending);
+            },
+
+            updateChart(labels, data) {
+                const ctx = document.getElementById('income-chart').getContext('2d');
+                if (App.chart) App.chart.destroy();
+
+                App.chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets:[{
+                            label: 'Income',
+                            data: data,
+                            backgroundColor: 'rgba(79, 70, 229, 0.8)',
+                            borderColor: 'rgba(79, 70, 229, 1)',
+                            borderWidth: 1,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { color: '#9CA3AF' } },
+                            y: {
+                                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                                ticks: { color: '#9CA3AF', callback: (value) => '₱' + value }
+                            }
+                        }
+                    }
+                });
+            },
+
+            showModal(title, content, footer = '') {
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-body').innerHTML = content;
+                document.getElementById('modal-footer').innerHTML = footer;
+                document.getElementById('modal-overlay').classList.add('active');
+            },
+
+            closeModal() {
+                document.getElementById('modal-overlay').classList.remove('active');
+            },
+
+            showToast(message, type = 'info') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = `toast ${type} show`;
+                setTimeout(() => toast.classList.remove('show'), 3000);
+            },
+
+            showConfirm(title, message, onConfirm, danger = false) {
+                this.showModal(
+                    'Confirm',
+                    `
+                    <div class="confirm-dialog">
+                        <div class="confirm-icon ${danger ? 'danger' : ''}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="12" y1="8" x2="12" y2="12"/>
+                                <line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                        </div>
+                        <h3 class="confirm-title">${title}</h3>
+                        <p class="confirm-message">${message}</p>
+                        <div class="confirm-buttons">
+                            <button class="btn btn-outline" onclick="UI.closeModal()">Cancel</button>
+                            <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" id="confirm-btn">${danger ? 'Delete' : 'Confirm'}</button>
+                        </div>
+                    </div>
+                    `,
+                    ''
+                );
+
+                document.getElementById('confirm-btn').addEventListener('click', () => {
+                    onConfirm();
+                    this.closeModal();
+                });
+            },
+
+            async showBusinessModal() {
+                const settings = await DB.get('settings', 'business') || {};
+                
+                this.showModal(
+                    'Business Info',
+                    `
+                    <div class="form-group">
+                        <label class="form-label">Business Name</label>
+                        <input type="text" class="form-input" id="business-name" value="${settings.name || ''}" placeholder="Your business name">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <input type="text" class="form-input" id="business-address" value="${settings.address || ''}" placeholder="Business address">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Contact</label>
+                        <input type="tel" class="form-input" id="business-contact" value="${settings.contact || ''}" placeholder="Phone number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="business-email" value="${settings.email || ''}" placeholder="Email address">
+                    </div>
+                    `,
+                    `<button class="btn btn-primary btn-full" id="save-business">Save</button>`
+                );
+
+                document.getElementById('save-business').addEventListener('click', async () => {
+                    const data = {
+                        key: 'business',
+                        name: document.getElementById('business-name').value,
+                        address: document.getElementById('business-address').value,
+                        contact: document.getElementById('business-contact').value,
+                        email: document.getElementById('business-email').value
+                    };
+                    await DB.put('settings', data);
+                    this.closeModal();
+                    this.showToast('Business info saved', 'success');
+                });
+            },
+
+            showPinChangeModal() {
+                this.showModal(
+                    'Change PIN',
+                    `
+                    <div class="form-group">
+                        <label class="form-label">Current PIN</label>
+                        <input type="password" class="form-input" id="old-pin" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="Enter current PIN">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">New PIN</label>
+                        <input type="password" class="form-input" id="new-pin" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="Enter new PIN">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Confirm New PIN</label>
+                        <input type="password" class="form-input" id="confirm-new-pin" maxlength="4" pattern="[0-9]*" inputmode="numeric" placeholder="Confirm new PIN">
+                    </div>
+                    `,
+                    `<button class="btn btn-primary btn-full" id="change-pin-btn">Change PIN</button>`
+                );
+
+                document.getElementById('change-pin-btn').addEventListener('click', async () => {
+                    const oldPin = document.getElementById('old-pin').value;
+                    const newPin = document.getElementById('new-pin').value;
+                    const confirmPin = document.getElementById('confirm-new-pin').value;
+
+                    if (newPin !== confirmPin) {
+                        this.showToast('PINs do not match', 'error');
+                        return;
+                    }
+
+                    const success = await Auth.changePin(oldPin, newPin);
+                    if (success) {
+                        this.closeModal();
+                        this.showToast('PIN changed successfully', 'success');
+                    } else {
+                        this.showToast('Current PIN is incorrect', 'error');
+                    }
+                });
+            },
+
+            async backupData() {
+                const data = await DB.exportAll();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rental-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this.showToast('Backup created', 'success');
+            },
+
+            async restoreData(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        await DB.importAll(data);
+                        this.showToast('Data restored', 'success');
+                        this.refreshDashboard();
+                    } catch (err) {
+                        this.showToast('Invalid backup file', 'error');
+                    }
+                };
+                reader.readAsText(file);
+                e.target.value = '';
+            },
+
+            showClearDataModal() {
+                this.showConfirm(
+                    'Clear All Data',
+                    'This will permanently delete all tenants, rentals, payments, and settings. This action cannot be undone.',
+                    async () => {
+                        await DB.clearAll();
+                        localStorage.clear();
+                        location.reload();
+                    },
+                    true
+                );
+            },
+
+            formatCurrency(amount) {
+                return '₱' + (amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            },
+
+            formatDate(date) {
+                return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+            },
+
+            formatType(type) {
+                const types = { 'long-term': 'Long Term', 'short-term': 'Short Term', 'custom': 'Custom', 'guest': 'Guest', 'bedspace': 'Bedspace', 'general': 'General' };
+                return types[type] || type;
+            },
+
+            getActivityIcon(type) {
+                const icons = {
+                    income: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+                    expense: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+                    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+                };
+                return icons[type] || icons.info;
+            }
+        };
+
+        // ========== RENTAL MANAGER MODULE ==========
+        const RentalManager = {
+            currentRental: null,
+
+            async showAddModal() {
+                const tenants = await DB.getAll('tenants');
+                
+                UI.showModal(
+                    'Add Rental',
+                    `
+                    <div class="form-group">
+                        <label class="form-label">Rental Type</label>
+                        <select class="form-input form-select" id="rental-type">
+                            <option value="long-term">Long-Term Rental</option>
+                            <option value="short-term">Short-Term Rental</option>
+                            <option value="custom">Custom Rate</option>
+                            <option value="guest">Guest-Based Pricing</option>
+                            <option value="bedspace">Bedspace</option>
+                            <option value="general">General (Car/Equipment)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Property/Item Name</label>
+                        <input type="text" class="form-input" id="rental-property" placeholder="e.g., Unit 101, Toyota Vios">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tenant</label>
+                        <select class="form-input form-select" id="rental-tenant">
+                            <option value="">Select tenant</option>
+                            ${tenants.map(t => `<option value="${t.id}">${t.name}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div id="rate-section">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Rate</label>
+                                <input type="number" class="form-input" id="rental-rate" placeholder="0.00" step="0.01">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Period</label>
+                                <select class="form-input form-select" id="rental-period">
+                                    <option value="monthly">Monthly</option>
+                                    <option value="daily">Daily</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="hourly">Hourly</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-input" id="rental-start">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-input" id="rental-end">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-input" id="rental-notes" placeholder="Additional notes..."></textarea>
+                    </div>
+
+                    <button class="btn btn-outline btn-full mb-3" id="calc-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <rect x="4" y="2" width="16" height="20" rx="2"/>
+                            <line x1="8" y1="6" x2="16" y2="6"/>
+                            <line x1="8" y1="10" x2="16" y2="10"/>
+                            <line x1="8" y1="14" x2="16" y2="14"/>
+                            <line x1="8" y1="18" x2="12" y2="18"/>
+                        </svg>
+                        Calculate Cost
+                    </button>
+
+                    <div id="calc-result" class="calc-breakdown hidden"></div>
+                    `,
+                    `<button class="btn btn-outline btn-full" onclick="TenantManager.showAddModal()">+ Add New Tenant</button>
+                     <button class="btn btn-primary btn-full" id="save-rental">Save Rental</button>`
+                );
+
+                document.getElementById('rental-start').valueAsDate = new Date();
+                document.getElementById('rental-type').addEventListener('change', (e) => this.handleTypeChange(e.target.value));
+                document.getElementById('calc-btn').addEventListener('click', () => this.calculatePreview());
+                document.getElementById('save-rental').addEventListener('click', () => this.saveRental());
+                
+                this.handleTypeChange('long-term');
+            },
+
+            handleTypeChange(type) {
+                const rateSection = document.getElementById('rate-section');
+                let html = '';
+                
+                switch(type) {
+                    case 'long-term':
+                        html = `
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Monthly Rate</label>
+                                    <input type="number" class="form-input" id="rental-rate" placeholder="0.00" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Period</label>
+                                    <input type="text" class="form-input" value="Monthly" disabled>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'short-term':
+                        html = `
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Daily Rate</label>
+                                    <input type="number" class="form-input" id="rental-rate" placeholder="0.00" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Period</label>
+                                    <input type="text" class="form-input" value="Daily" disabled>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                    case 'custom':
+                        html = `
+                            <div class="form-group">
+                                <label class="form-label">Custom Rates</label>
+                                <div id="custom-rates">
+                                    <div class="form-row mb-2">
+                                        <input type="date" class="form-input" id="rate1-start" placeholder="Start">
+                                        <input type="date" class="form-input" id="rate1-end" placeholder="End">
+                                        <input type="number" class="form-input" id="rate1-amount" placeholder="Rate" style="max-width: 100px;">
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline btn-full mt-2" onclick="RentalManager.addCustomRate()">+ Add Rate Segment</button>
+                            </div>
+                        `;
+                        break;
+                    case 'guest':
+                        html = `
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Base Rate</label>
+                                    <input type="number" class="form-input" id="rental-rate" placeholder="0.00" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Extra Guest Fee</label>
+                                    <input type="number" class="form-input" id="guest-fee" placeholder="0.00" step="0.01">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Number of Guests</label>
+                                <input type="number" class="form-input" id="guest-count" placeholder="1" min="1">
+                            </div>
+                        `;
+                        break;
+                    case 'bedspace':
+                        html = `
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Rate per Head</label>
+                                    <input type="number" class="form-input" id="rental-rate" placeholder="0.00" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Period</label>
+                                    <select class="form-input form-select" id="rental-period">
+                                        <option value="monthly">Monthly</option>
+                                        <option value="daily">Daily</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Number of Heads</label>
+                                <input type="number" class="form-input" id="head-count" placeholder="1" min="1">
+                            </div>
+                        `;
+                        break;
+                    case 'general':
+                        html = `
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Rate</label>
+                                    <input type="number" class="form-input" id="rental-rate" placeholder="0.00" step="0.01">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Time Unit</label>
+                                    <select class="form-input form-select" id="rental-period">
+                                        <option value="daily">Daily</option>
+                                        <option value="hourly">Hourly</option>
+                                        <option value="weekly">Weekly</option>
+                                    </select>
+                                </div>
+                            </div>
+                        `;
+                        break;
+                }
+                
+                rateSection.innerHTML = html;
+            },
+
+            addCustomRate() {
+                const container = document.getElementById('custom-rates');
+                const count = container.children.length + 1;
+                const div = document.createElement('div');
+                div.className = 'form-row mb-2';
+                div.innerHTML = `
+                    <input type="date" class="form-input" id="rate${count}-start">
+                    <input type="date" class="form-input" id="rate${count}-end">
+                    <input type="number" class="form-input" id="rate${count}-amount" placeholder="Rate" style="max-width: 100px;">
+                `;
+                container.appendChild(div);
+            },
+
+            calculatePreview() {
+                const type = document.getElementById('rental-type').value;
+                const rate = parseFloat(document.getElementById('rental-rate')?.value) || 0;
+                const startDate = document.getElementById('rental-start').value;
+                const endDate = document.getElementById('rental-end').value;
+
+                if (!startDate || !rate) {
+                    UI.showToast('Please fill in rate and dates', 'error');
+                    return;
+                }
+
+                let breakdown = this.calculate(type, {
+                    rate, startDate, endDate,
+                    guestFee: parseFloat(document.getElementById('guest-fee')?.value) || 0,
+                    guestCount: parseInt(document.getElementById('guest-count')?.value) || 1,
+                    headCount: parseInt(document.getElementById('head-count')?.value) || 1,
+                    period: document.getElementById('rental-period')?.value || 'monthly'
+                });
+
+                const resultDiv = document.getElementById('calc-result');
+                resultDiv.classList.remove('hidden');
+                resultDiv.innerHTML = breakdown.html;
+            },
+
+            calculate(type, params) {
+                const { rate, startDate, endDate, guestFee, guestCount, headCount, period } = params;
+                const start = new Date(startDate);
+                const end = endDate ? new Date(endDate) : new Date();
+                const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                
+                let total = 0;
+                let breakdown =[];
+
+                switch(type) {
+                    case 'long-term':
+                        const months = days / 30;
+                        const fullMonths = Math.floor(months);
+                        const remainingDays = days - (fullMonths * 30);
+                        const dailyRate = rate / 30;
+                        
+                        breakdown.push({ label: 'Monthly Rate', value: rate });
+                        breakdown.push({ label: 'Full Months', value: fullMonths });
+                        breakdown.push({ label: `Full Month Cost (${fullMonths} × ${UI.formatCurrency(rate)})`, value: fullMonths * rate });
+                        
+                        if (remainingDays > 0) {
+                            breakdown.push({ label: 'Remaining Days', value: remainingDays.toFixed(0) });
+                            breakdown.push({ label: `Daily Rate (${UI.formatCurrency(dailyRate)}/day)`, value: dailyRate.toFixed(2) });
+                            breakdown.push({ label: `Partial Month Cost`, value: (remainingDays * dailyRate).toFixed(2) });
+                        }
+                        
+                        total = (fullMonths * rate) + (remainingDays * dailyRate);
+                        break;
+                    case 'short-term':
+                        breakdown.push({ label: 'Daily Rate', value: rate });
+                        breakdown.push({ label: 'Total Days', value: days });
+                        total = rate * days;
+                        breakdown.push({ label: `Total (${days} days × ${UI.formatCurrency(rate)})`, value: total });
+                        break;
+                    case 'guest':
+                        const extraGuests = Math.max(0, guestCount - 1);
+                        const dailyTotal = rate + (extraGuests * guestFee);
+                        breakdown.push({ label: 'Base Rate', value: rate });
+                        breakdown.push({ label: 'Guests', value: guestCount });
+                        breakdown.push({ label: 'Extra Guests', value: extraGuests });
+                        breakdown.push({ label: `Extra Guest Fee (${extraGuests} × ${UI.formatCurrency(guestFee)})`, value: extraGuests * guestFee });
+                        breakdown.push({ label: 'Daily Total', value: dailyTotal });
+                        breakdown.push({ label: 'Days', value: days });
+                        total = dailyTotal * days;
+                        breakdown.push({ label: 'Total', value: total });
+                        break;
+                    case 'bedspace':
+                        const dailyHeadRate = period === 'monthly' ? rate / 30 : rate;
+                        breakdown.push({ label: 'Rate per Head', value: rate });
+                        breakdown.push({ label: 'Period', value: period });
+                        breakdown.push({ label: 'Number of Heads', value: headCount });
+                        breakdown.push({ label: 'Days', value: days });
+                        total = dailyHeadRate * days * headCount;
+                        breakdown.push({ label: 'Total', value: total });
+                        break;
+                    case 'general':
+                        const units = period === 'hourly' ? days * 24 : (period === 'weekly' ? days / 7 : days);
+                        breakdown.push({ label: 'Rate', value: rate });
+                        breakdown.push({ label: 'Period', value: period });
+                        breakdown.push({ label: 'Units', value: units.toFixed(1) });
+                        total = rate * units;
+                        breakdown.push({ label: 'Total', value: total });
+                        break;
+                }
+
+                return {
+                    total: Math.round(total * 100) / 100,
+                    days,
+                    breakdown,
+                    html: `
+                        <h4 style="margin-bottom: 12px; font-weight: 600;">Cost Breakdown</h4>
+                        ${breakdown.map(item => `
+                            <div class="calc-row">
+                                <span class="calc-label">${item.label}</span>
+                                <span>${typeof item.value === 'number' ? UI.formatCurrency(item.value) : item.value}</span>
+                            </div>
+                        `).join('')}
+                        <div class="calc-row total">
+                            <span>Total</span>
+                            <span>${UI.formatCurrency(total)}</span>
+                        </div>
+                    `
+                };
+            },
+
+            async saveRental() {
+                const type = document.getElementById('rental-type').value;
+                const propertyName = document.getElementById('rental-property').value;
+                const tenantId = parseInt(document.getElementById('rental-tenant').value);
+                const rate = parseFloat(document.getElementById('rental-rate')?.value) || 0;
+                const startDate = document.getElementById('rental-start').value;
+                const endDate = document.getElementById('rental-end').value;
+                const notes = document.getElementById('rental-notes').value;
+
+                if (!tenantId) { UI.showToast('Please select a tenant', 'error'); return; }
+                if (!propertyName) { UI.showToast('Please enter property/item name', 'error'); return; }
+
+                const calculation = this.calculate(type, {
+                    rate, startDate, endDate,
+                    guestFee: parseFloat(document.getElementById('guest-fee')?.value) || 0,
+                    guestCount: parseInt(document.getElementById('guest-count')?.value) || 1,
+                    headCount: parseInt(document.getElementById('head-count')?.value) || 1,
+                    period: document.getElementById('rental-period')?.value || 'monthly'
+                });
+
+                const rental = {
+                    type, propertyName, tenantId, rate, startDate, endDate, notes,
+                    totalAmount: calculation.total, balance: calculation.total, status: 'pending',
+                    period: document.getElementById('rental-period')?.value || 'monthly'
+                };
+
+                if (type === 'guest') {
+                    rental.guestFee = parseFloat(document.getElementById('guest-fee')?.value) || 0;
+                    rental.guestCount = parseInt(document.getElementById('guest-count')?.value) || 1;
+                } else if (type === 'bedspace') {
+                    rental.headCount = parseInt(document.getElementById('head-count')?.value) || 1;
+                }
+
+                await DB.add('rentals', rental);
+                await DB.add('activities', {
+                    type: 'info', description: `New rental added: ${propertyName}`, timestamp: new Date().toISOString()
+                });
+
+                UI.closeModal();
+                UI.showToast('Rental added successfully', 'success');
+                UI.refreshRentals();
+                UI.refreshDashboard();
+            },
+
+            async showDetail(id) {
+                const rental = await DB.get('rentals', id);
+                if (!rental) return;
+
+                this.currentRental = rental;
+                const tenant = await DB.get('tenants', rental.tenantId);
+                const payments = (await DB.getAll('payments')).filter(p => p.rentalId === id);
+
+                UI.showModal(
+                    rental.propertyName,
+                    `
+                    <div class="mb-4">
+                        <span class="type-badge ${rental.type}">${UI.formatType(rental.type)}</span>
+                        <span class="status-badge ${rental.status}" style="margin-left: 8px;">${rental.status}</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Tenant</label>
+                        <p class="text-lg font-semibold">${tenant?.name || 'Unknown'}</p>
+                    </div>
+
+                    <div class="form-row mb-4">
+                        <div><label class="form-label">Start Date</label><p>${new Date(rental.startDate).toLocaleDateString()}</p></div>
+                        <div><label class="form-label">End Date</label><p>${rental.endDate ? new Date(rental.endDate).toLocaleDateString() : 'Ongoing'}</p></div>
+                    </div>
+
+                    <div class="calc-breakdown">
+                        <h4 style="margin-bottom: 12px; font-weight: 600;">Financial Summary</h4>
+                        <div class="calc-row">
+                            <span class="calc-label">Total Amount</span>
+                            <span>${UI.formatCurrency(rental.totalAmount)}</span>
+                        </div>
+                        <div class="calc-row">
+                            <span class="calc-label">Paid</span>
+                            <span class="text-success">${UI.formatCurrency(rental.totalAmount - rental.balance)}</span>
+                        </div>
+                        <div class="calc-row total">
+                            <span>Balance</span>
+                            <span class="${rental.balance > 0 ? 'text-danger' : 'text-success'}">${UI.formatCurrency(rental.balance)}</span>
+                        </div>
+                    </div>
+
+                    ${rental.notes ? `<div class="form-group"><label class="form-label">Notes</label><p>${rental.notes}</p></div>` : ''}
+
+                    <div class="section-title mt-4">
+                        <span>Payment History</span>
+                        <button class="btn btn-primary btn-icon" onclick="RentalManager.showPaymentModal()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="card-list">
+                        ${payments.length === 0 ? '<p class="text-muted text-center p-4">No payments yet</p>' : 
+                          payments.map(p => `
+                            <div class="payment-item">
+                                <div class="payment-header">
+                                    <span class="payment-date">${new Date(p.createdAt).toLocaleDateString()}</span>
+                                    <span class="payment-amount text-success">${UI.formatCurrency(p.amount)}</span>
+                                </div>
+                                ${p.note ? `<div class="payment-note">${p.note}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+                    `,
+                    `<button class="btn btn-outline" onclick="RentalManager.editRental()">Edit</button>
+                     <button class="btn btn-danger" onclick="RentalManager.deleteRental()">Delete</button>`
+                );
+            },
+
+            showPaymentModal() {
+                UI.showModal(
+                    'Add Payment',
+                    `
+                    <div class="form-group">
+                        <label class="form-label">Amount</label>
+                        <input type="number" class="form-input" id="payment-amount" placeholder="0.00" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" class="form-input" id="payment-date" value="${new Date().toISOString().split('T')[0]}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Note</label>
+                        <input type="text" class="form-input" id="payment-note" placeholder="Optional note">
+                    </div>
+                    `,
+                    `<button class="btn btn-success btn-full" id="save-payment">Save Payment</button>`
+                );
+
+                document.getElementById('save-payment').addEventListener('click', async () => {
+                    const amount = parseFloat(document.getElementById('payment-amount').value);
+                    const date = document.getElementById('payment-date').value;
+                    const note = document.getElementById('payment-note').value;
+
+                    if (!amount || amount <= 0) { UI.showToast('Please enter a valid amount', 'error'); return; }
+
+                    const payment = { rentalId: this.currentRental.id, amount, date, note };
+                    await DB.add('payments', payment);
+
+                    const newBalance = Math.max(0, this.currentRental.balance - amount);
+                    const status = newBalance === 0 ? 'paid' : (newBalance < this.currentRental.totalAmount ? 'partial' : this.currentRental.status);
+                    
+                    await DB.put('rentals', { ...this.currentRental, balance: newBalance, status });
+                    await DB.add('activities', {
+                        type: 'income', description: `Payment received: ${this.currentRental.propertyName}`, amount, timestamp: new Date().toISOString()
+                    });
+
+                    UI.closeModal();
+                    this.showDetail(this.currentRental.id);
+                    UI.showToast('Payment recorded', 'success');
+                    UI.refreshDashboard();
+                });
+            },
+
+            async editRental() {
+                const rental = this.currentRental;
+                const tenants = await DB.getAll('tenants');
+
+                UI.showModal(
+                    'Edit Rental',
+                    `
+                    <div class="form-group">
+                        <label class="form-label">Property/Item Name</label>
+                        <input type="text" class="form-input" id="edit-property" value="${rental.propertyName}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tenant</label>
+                        <select class="form-input form-select" id="edit-tenant">
+                            ${tenants.map(t => `<option value="${t.id}" ${t.id === rental.tenantId ? 'selected' : ''}>${t.name}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Rate</label>
+                            <input type="number" class="form-input" id="edit-rate" value="${rental.rate}" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select class="form-input form-select" id="edit-status">
+                                <option value="active" ${rental.status === 'active' ? 'selected' : ''}>Active</option>
+                                <option value="pending" ${rental.status === 'pending' ? 'selected' : ''}>Pending</option>
+                                <option value="paid" ${rental.status === 'paid' ? 'selected' : ''}>Paid</option>
+                                <option value="overdue" ${rental.status === 'overdue' ? 'selected' : ''}>Overdue</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-input" id="edit-start" value="${rental.startDate}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-input" id="edit-end" value="${rental.endDate || ''}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-input" id="edit-notes">${rental.notes || ''}</textarea>
+                    </div>
+                    `,
+                    `<button class="btn btn-primary btn-full" id="update-rental">Update</button>`
+                );
+
+                document.getElementById('update-rental').addEventListener('click', async () => {
+                    const updated = {
+                        ...rental,
+                        propertyName: document.getElementById('edit-property').value,
+                        tenantId: parseInt(document.getElementById('edit-tenant').value),
+                        rate: parseFloat(document.getElementById('edit-rate').value),
+                        status: document.getElementById('edit-status').value,
+                        startDate: document.getElementById('edit-start').value,
+                        endDate: document.getElementById('edit-end').value,
+                        notes: document.getElementById('edit-notes').value
+                    };
+                    await DB.put('rentals', updated);
+                    UI.closeModal();
+                    UI.showToast('Rental updated', 'success');
+                    UI.refreshRentals();
+                    this.showDetail(updated.id);
+                });
+            },
+
+            async deleteRental() {
+                UI.showConfirm(
+                    'Delete Rental', 'Are you sure you want to delete this rental? This action cannot be undone.',
+                    async () => {
+                        await DB.delete('rentals', this.currentRental.id);
+                        const payments = (await DB.getAll('payments')).filter(p => p.rentalId === this.currentRental.id);
+                        for (const p of payments) await DB.delete('payments', p.id);
+                        UI.closeModal();
+                        UI.showToast('Rental deleted', 'success');
+                        UI.refreshRentals();
+                        UI.refreshDashboard();
+                    }, true
+                );
+            }
+        };
+
+        // ========== TENANT MANAGER MODULE ==========
+        const TenantManager = {
+            currentTenant: null,
+
+            async showAddModal() {
+                UI.showModal(
+                    'Add Tenant',
+                    `
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-input" id="tenant-name" placeholder="John Doe">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-input" id="tenant-phone" placeholder="+1 234 567 890">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-input" id="tenant-email" placeholder="john@example.com">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ID Number</label>
+                        <input type="text" class="form-input" id="tenant-idnum" placeholder="ID / Passport number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <input type="text" class="form-input" id="tenant-address" placeholder="Current address">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-input" id="tenant-notes" placeholder="Additional notes..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Photo</label>
+                        <div class="photo-grid">
+                            <div class="photo-add" onclick="document.getElementById('photo-input').click()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg>
+                                <span>Add Photo</span>
+                            </div>
+                        </div>
+                        <img id="tenant-photo-preview" class="hidden" style="width: 80px; height: 80px; border-radius: 12px; object-fit: cover; margin-top: 8px;">
+                    </div>
+                    `,
+                    `<button class="btn btn-primary btn-full" id="save-tenant">Save Tenant</button>`
+                );
+
+                document.getElementById('photo-input').onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            document.getElementById('tenant-photo-preview').src = event.target.result;
+                            document.getElementById('tenant-photo-preview').classList.remove('hidden');
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                document.getElementById('save-tenant').addEventListener('click', () => this.saveTenant());
+            },
+
+            async saveTenant() {
+                const name = document.getElementById('tenant-name').value;
+                const contact = document.getElementById('tenant-phone').value;
+                const email = document.getElementById('tenant-email').value;
+                const idNumber = document.getElementById('tenant-idnum').value;
+                const address = document.getElementById('tenant-address').value;
+                const notes = document.getElementById('tenant-notes').value;
+                const photoPreview = document.getElementById('tenant-photo-preview');
+                const photo = photoPreview.classList.contains('hidden') ? null : photoPreview.src;
+
+                if (!name) { UI.showToast('Please enter tenant name', 'error'); return; }
+
+                const tenant = { name, contact, email, idNumber, address, notes, photo };
+                await DB.add('tenants', tenant);
+                await DB.add('activities', {
+                    type: 'info', description: `New tenant added: ${name}`, timestamp: new Date().toISOString()
+                });
+
+                UI.closeModal();
+                UI.showToast('Tenant added successfully', 'success');
+                UI.refreshTenants();
+                UI.refreshDashboard();
+            },
+
+            async showDetail(id) {
+                const tenant = await DB.get('tenants', id);
+                if (!tenant) return;
+
+                this.currentTenant = tenant;
+                const rentals = (await DB.getAll('rentals')).filter(r => r.tenantId === id);
+
+                UI.showModal(
+                    tenant.name,
+                    `
+                    <div class="text-center mb-4">
+                        <div class="rental-avatar" style="width: 80px; height: 80px; margin: 0 auto; font-size: 28px;">
+                            ${tenant.photo ? `<img src="${tenant.photo}" alt="">` : tenant.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                        </div>
+                    </div>
+                    <div class="form-row mb-4">
+                        <div><label class="form-label">Phone</label><p>${tenant.contact || 'N/A'}</p></div>
+                        <div><label class="form-label">Email</label><p>${tenant.email || 'N/A'}</p></div>
+                    </div>
+                    <div class="form-row mb-4">
+                        <div><label class="form-label">ID Number</label><p>${tenant.idNumber || 'N/A'}</p></div>
+                        <div><label class="form-label">Address</label><p>${tenant.address || 'N/A'}</p></div>
+                    </div>
+                    ${tenant.notes ? `<div class="form-group"><label class="form-label">Notes</label><p>${tenant.notes}</p></div>` : ''}
+
+                    <div class="section-title mt-4"><span>Rental History (${rentals.length})</span></div>
+                    <div class="card-list">
+                        ${rentals.length === 0 ? '<p class="text-muted text-center p-4">No rentals yet</p>' :
+                          rentals.map(r => `
+                            <div class="rental-card" onclick="UI.closeModal(); setTimeout(() => RentalManager.showDetail(${r.id}), 300)">
+                                <div class="rental-info">
+                                    <div class="rental-name">${r.propertyName}</div>
+                                    <div class="rental-details">
+                                        <span class="type-badge ${r.type}">${UI.formatType(r.type)}</span>
+                                        <span class="status-badge ${r.status}">${r.status}</span>
+                                    </div>
+                                </div>
+                                <div class="rental-status"><div class="rental-amount">${UI.formatCurrency(r.totalAmount)}</div></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    `,
+                    `<button class="btn btn-outline" onclick="TenantManager.editTenant()">Edit</button>
+                     <button class="btn btn-danger" onclick="TenantManager.deleteTenant()">Delete</button>`
+                );
+            },
+
+            async editTenant() {
+                const tenant = this.currentTenant;
+
+                UI.showModal(
+                    'Edit Tenant',
+                    `
+                    <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="edit-tenant-name" value="${tenant.name}"></div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-input" id="edit-tenant-phone" value="${tenant.contact || ''}"></div>
+                        <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-input" id="edit-tenant-email" value="${tenant.email || ''}"></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">ID Number</label><input type="text" class="form-input" id="edit-tenant-idnum" value="${tenant.idNumber || ''}"></div>
+                    <div class="form-group"><label class="form-label">Address</label><input type="text" class="form-input" id="edit-tenant-address" value="${tenant.address || ''}"></div>
+                    <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="edit-tenant-notes">${tenant.notes || ''}</textarea></div>
+                    `,
+                    `<button class="btn btn-primary btn-full" id="update-tenant">Update</button>`
+                );
+
+                document.getElementById('update-tenant').addEventListener('click', async () => {
+                    const updated = {
+                        ...tenant,
+                        name: document.getElementById('edit-tenant-name').value,
+                        contact: document.getElementById('edit-tenant-phone').value,
+                        email: document.getElementById('edit-tenant-email').value,
+                        idNumber: document.getElementById('edit-tenant-idnum').value,
+                        address: document.getElementById('edit-tenant-address').value,
+                        notes: document.getElementById('edit-tenant-notes').value
+                    };
+                    await DB.put('tenants', updated);
+                    UI.closeModal();
+                    UI.showToast('Tenant updated', 'success');
+                    UI.refreshTenants();
+                    this.showDetail(updated.id);
+                });
+            },
+
+            async deleteTenant() {
+                UI.showConfirm(
+                    'Delete Tenant', 'Are you sure you want to delete this tenant? All related rentals will also be deleted.',
+                    async () => {
+                        const rentals = (await DB.getAll('rentals')).filter(r => r.tenantId === this.currentTenant.id);
+                        for (const r of rentals) {
+                            const payments = (await DB.getAll('payments')).filter(p => p.rentalId === r.id);
+                            for (const p of payments) await DB.delete('payments', p.id);
+                            await DB.delete('rentals', r.id);
+                        }
+                        await DB.delete('tenants', this.currentTenant.id);
+                        UI.closeModal();
+                        UI.showToast('Tenant deleted', 'success');
+                        UI.refreshTenants();
+                        UI.refreshDashboard();
+                    }, true
+                );
+            }
+        };
+
+        // ========== REPORT GENERATOR MODULE ==========
+        const ReportGenerator = {
+            async exportPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                const business = await DB.get('settings', 'business') || {};
+                const payments = await DB.getAll('payments');
+                const rentals = await DB.getAll('rentals');
+                const tenants = await DB.getAll('tenants');
+                
+                doc.setFontSize(20);
+                doc.text(business.name || 'RentalRMS', 20, 20);
+                doc.setFontSize(12);
+                doc.text(business.address || '', 20, 28);
+                doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 36);
+
+                doc.setFontSize(16);
+                doc.text('Summary Report', 20, 50);
+                
+                const totalIncome = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                const activeRentals = rentals.filter(r => r.status === 'active').length;
+                const pendingBalance = rentals.reduce((sum, r) => sum + (r.balance || 0), 0);
+
+                doc.setFontSize(12);
+                doc.text(`Total Income: ₱${totalIncome.toFixed(2)}`, 20, 62);
+                doc.text(`Active Rentals: ${activeRentals}`, 20, 72);
+                doc.text(`Pending Balance: ₱${pendingBalance.toFixed(2)}`, 20, 82);
+                doc.text(`Total Tenants: ${tenants.length}`, 20, 92);
+
+                doc.setFontSize(16);
+                doc.text('Recent Payments', 20, 110);
+
+                let y = 122;
+                doc.setFontSize(10);
+                const recentPayments = payments.slice(-20).reverse();
+                
+                for (const p of recentPayments) {
+                    if (y > 270) { doc.addPage(); y = 20; }
+                    const rental = rentals.find(r => r.id === p.rentalId);
+                    doc.text(`${new Date(p.createdAt).toLocaleDateString()} - ${rental?.propertyName || 'Unknown'} - ₱${p.amount.toFixed(2)}`, 20, y);
+                    y += 8;
+                }
+
+                doc.save(`rental-report-${new Date().toISOString().split('T')[0]}.pdf`);
+                UI.showToast('PDF exported', 'success');
+            },
+
+            async exportCSV() {
+                const payments = await DB.getAll('payments');
+                const rentals = await DB.getAll('rentals');
+                const tenants = await DB.getAll('tenants');
+                
+                let csv = 'Date,Property,Tenant,Type,Amount,Balance,Status\n';
+                
+                for (const r of rentals) {
+                    const tenant = tenants.find(t => t.id === r.tenantId);
+                    csv += `${r.startDate},${r.propertyName},"${tenant?.name || 'Unknown'}",${r.type},${r.totalAmount},${r.balance},${r.status}\n`;
+                    
+                    const rentalPayments = payments.filter(p => p.rentalId === r.id);
+                    for (const p of rentalPayments) {
+                        csv += `${new Date(p.createdAt).toLocaleDateString()},${r.propertyName},"${tenant?.name || 'Unknown'}",Payment,${p.amount},,\n`;
+                    }
+                }
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `rental-data-${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+                URL.revokeObjectURL(url);
+                UI.showToast('CSV exported', 'success');
+            }
+        };
+
+        // ========== INITIALIZE APP ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            App.init();
+        });
+    </script>
+</body>
+</html>
